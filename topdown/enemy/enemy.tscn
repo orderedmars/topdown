@@ -1,0 +1,70 @@
+[gd_scene format=3 uid="uid://cd6ctyh0axuhy"]
+
+[ext_resource type="Script" uid="uid://dchrmhkthghwr" path="res://enemy/enemy.gd" id="1_2mvqj"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ofsxj"]
+size = Vector2(32, 32)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ppra6"]
+radius = 150.0
+
+[sub_resource type="ConvexPolygonShape2D" id="ConvexPolygonShape2D_2mvqj"]
+points = PackedVector2Array(0, 0, 0, 0, 0, 0)
+
+[node name="Enemy" type="CharacterBody2D" unique_id=2116036945]
+input_pickable = true
+script = ExtResource("1_2mvqj")
+
+[node name="Sprite" type="ColorRect" parent="." unique_id=1788649480]
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = 16.0
+color = Color(1, 0.2, 0.2, 0.53333336)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1193526312]
+shape = SubResource("RectangleShape2D_ofsxj")
+
+[node name="DetectionZone" type="Area2D" parent="." unique_id=863488578]
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DetectionZone" unique_id=2038034241]
+shape = SubResource("CircleShape2D_ppra6")
+
+[node name="DebugCircle" type="ColorRect" parent="DetectionZone" unique_id=765378578]
+offset_left = -150.0
+offset_top = -150.0
+offset_right = 150.0
+offset_bottom = 150.0
+color = Color(1, 0, 0, 0.13333334)
+
+[node name="HearingVisual" type="Polygon2D" parent="DetectionZone" unique_id=463341531]
+
+[node name="HealthBarContainer" type="Node2D" parent="." unique_id=993710310]
+position = Vector2(-25, -35)
+
+[node name="ProgressBar" type="ProgressBar" parent="HealthBarContainer" unique_id=1098972819]
+custom_minimum_size = Vector2(50, 8)
+value = 100.0
+show_percentage = false
+
+[node name="RayCast2D" type="RayCast2D" parent="." unique_id=1484443247]
+
+[node name="VisionCone" type="Area2D" parent="." unique_id=39696779]
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="VisionCone" unique_id=1291585982]
+shape = SubResource("ConvexPolygonShape2D_2mvqj")
+
+[node name="VisionVisual" type="Polygon2D" parent="VisionCone" unique_id=527955245]
+
+[node name="Outline" type="ReferenceRect" parent="." unique_id=1359207655]
+visible = false
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+border_color = Color(1, 1, 0, 1)
+editor_only = false

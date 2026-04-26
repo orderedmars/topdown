@@ -1,0 +1,37 @@
+[gd_scene format=3 uid="uid://djb57fxjpl4r3"]
+
+[ext_resource type="Script" uid="uid://coj1pue2jfedh" path="res://player/player.gd" id="1_oul6g"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_oul6g"]
+radius = 100.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_oul6g"]
+size = Vector2(32, 32)
+
+[node name="Player" type="CharacterBody2D" unique_id=247332971]
+script = ExtResource("1_oul6g")
+
+[node name="DetectionZone" type="Area2D" parent="." unique_id=529051253 groups=["player_detection"]]
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DetectionZone" unique_id=209637988]
+shape = SubResource("CircleShape2D_oul6g")
+
+[node name="DebugCircle" type="ColorRect" parent="DetectionZone" unique_id=421606993]
+
+[node name="DetectionVisual" type="Polygon2D" parent="DetectionZone" unique_id=600824258]
+
+[node name="Sprite" type="ColorRect" parent="." unique_id=1517722860]
+z_index = 1
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = 16.0
+color = Color(0.2, 0.26666668, 1, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1419606400]
+shape = SubResource("RectangleShape2D_oul6g")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1914838355]
+zoom = Vector2(2, 2)

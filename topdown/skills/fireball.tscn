@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://dqm82rfx4868i"]
+
+[ext_resource type="Script" uid="uid://c72fm18gg2hhv" path="res://skills/fireball.gd" id="1_p4cjx"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_5twxi"]
+radius = 60.0
+
+[node name="Fireball" type="Area2D" unique_id=1248965871]
+script = ExtResource("1_p4cjx")
+
+[node name="Sprite" type="ColorRect" parent="." unique_id=1956863344]
+offset_left = -8.0
+offset_top = -8.0
+offset_right = 8.0
+offset_bottom = 8.0
+color = Color(1, 0.26666668, 0, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1724318788]
+shape = SubResource("CircleShape2D_5twxi")

@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://4tmike6umwmy"]
+
+[ext_resource type="Script" uid="uid://cr5nl1jijat0i" path="res://skills/arrow.gd" id="1_3jatm"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mnkjd"]
+size = Vector2(12, 4)
+
+[node name="Arrow" type="Area2D" unique_id=1530248301]
+script = ExtResource("1_3jatm")
+
+[node name="Sprite" type="ColorRect" parent="." unique_id=1281948679]
+offset_left = -6.0
+offset_top = -2.0
+offset_right = 6.0
+offset_bottom = 2.0
+color = Color(1, 1, 0, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1925194931]
+shape = SubResource("RectangleShape2D_mnkjd")
