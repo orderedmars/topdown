@@ -3,10 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://djb57fxjpl4r3" path="res://player/player.tscn" id="1_f3sb7"]
 [ext_resource type="Script" uid="uid://bggr1a8mjbnkv" path="res://hud.gd" id="2_fj7yv"]
 [ext_resource type="Script" uid="uid://bd184edwtalax" path="res://traps/sludge_trap.gd" id="3_aqk2v"]
-[ext_resource type="Theme" uid="uid://bs5i2pvf7gods" path="res://health_theme.tres" id="3_pkg7o"]
 [ext_resource type="Script" uid="uid://cl4im36qe42e" path="res://traps/spike_trap.gd" id="4_036b0"]
-[ext_resource type="Theme" uid="uid://bxwv1fogo8unh" path="res://mana_theme.tres" id="4_gbfbk"]
-[ext_resource type="Theme" uid="uid://c70es1056etuv" path="res://stamina_theme.tres" id="5_ioo17"]
 [ext_resource type="PackedScene" uid="uid://cd6ctyh0axuhy" path="res://enemy/enemy.tscn" id="8_gbfbk"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_f3sb7"]
@@ -79,7 +76,6 @@ shape = SubResource("RectangleShape2D_tlwt5")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1154452854]
 script = ExtResource("2_fj7yv")
-
 
 [node name="SludgeTrap" type="Area2D" parent="." unique_id=1433798900]
 z_index = 1
