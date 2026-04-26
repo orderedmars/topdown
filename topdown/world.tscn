@@ -80,45 +80,6 @@ shape = SubResource("RectangleShape2D_tlwt5")
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1154452854]
 script = ExtResource("2_fj7yv")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HUD" unique_id=332478636]
-
-[node name="HealthBar" type="ProgressBar" parent="HUD/VBoxContainer" unique_id=351348600]
-custom_minimum_size = Vector2(200, 20)
-layout_mode = 2
-theme = ExtResource("3_pkg7o")
-value = 100.0
-
-[node name="ManaBar" type="ProgressBar" parent="HUD/VBoxContainer" unique_id=1743773875]
-custom_minimum_size = Vector2(200, 20)
-layout_mode = 2
-theme = ExtResource("4_gbfbk")
-value = 100.0
-
-[node name="StaminaBar" type="ProgressBar" parent="HUD/VBoxContainer" unique_id=960581389]
-custom_minimum_size = Vector2(200, 20)
-layout_mode = 2
-theme = ExtResource("5_ioo17")
-value = 100.0
-
-[node name="HealButton" type="Button" parent="HUD/VBoxContainer" unique_id=590544478]
-layout_mode = 2
-text = "Full Heal (Testing)"
-
-[node name="FireballButton" type="Button" parent="HUD/VBoxContainer" unique_id=1573782812]
-layout_mode = 2
-text = "Fireball (15 Mana)"
-
-[node name="ArrowButton" type="Button" parent="HUD/VBoxContainer" unique_id=738986675]
-layout_mode = 2
-text = "Shoot Arrow (5 Stamina)"
-
-[node name="Crosshair" type="ColorRect" parent="HUD" unique_id=1587486461]
-visible = false
-offset_left = -5.0
-offset_top = -5.0
-offset_right = 5.0
-offset_bottom = 5.0
-color = Color(1, 1, 1, 0.53333336)
 
 [node name="SludgeTrap" type="Area2D" parent="." unique_id=1433798900]
 z_index = 1
