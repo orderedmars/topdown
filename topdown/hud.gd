@@ -240,7 +240,7 @@ func _is_slot_active(mode: int) -> bool:
 
 func _update_skill_highlights(current_mode: int) -> void:
 	for slot in _skill_slots:
-		var is_active := slot["mode"] > 0 and slot["mode"] == current_mode
+		var is_active: bool = slot["mode"] > 0 and slot["mode"] == current_mode
 		slot["panel"].add_theme_stylebox_override("panel", slot["active_style"] if is_active else slot["normal_style"])
 
 # ── Crosshair ────────────────────────────────────────────────────
