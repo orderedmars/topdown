@@ -10,4 +10,3 @@ func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):
 		body.apply_trap_damage(instant_damage)
 		body.apply_stun(stun_duration)
-		print("Stepped on Spike Trap!")

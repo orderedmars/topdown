@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RaceData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://adventurer/race_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+race_name = "Human"
+description = "Adaptable and ambitious. A modest bonus to every stat — jack of all trades, master of none."
+color = Color(0.95, 0.85, 0.7, 1)
+modifier_strength = 1
+modifier_dexterity = 1
+modifier_constitution = 1
+modifier_intelligence = 1
+modifier_wisdom = 1
+modifier_charisma = 1
+race_skills = []

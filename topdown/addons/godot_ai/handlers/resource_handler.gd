@@ -1,14 +1,17 @@
 @tool
-class_name ResourceHandler
 extends RefCounted
 
 ## Handles resource search, inspection, and assignment to nodes.
 
+const NodeHandler := preload("res://addons/godot_ai/handlers/node_handler.gd")
+
 var _undo_redo: EditorUndoRedoManager
+var _connection: McpConnection
 
 
-func _init(undo_redo: EditorUndoRedoManager) -> void:
+func _init(undo_redo: EditorUndoRedoManager, connection: McpConnection = null) -> void:
 	_undo_redo = undo_redo
+	_connection = connection
 
 
 func search_resources(params: Dictionary) -> Dictionary:
@@ -111,9 +114,9 @@ func assign_resource(params: Dictionary) -> Dictionary:
 	if scene_root == null:
 		return McpErrorCodes.make(McpErrorCodes.EDITOR_NOT_READY, "No scene open")
 
-	var node := ScenePath.resolve(node_path, scene_root)
+	var node := McpScenePath.resolve(node_path, scene_root)
 	if node == null:
-		return McpErrorCodes.make(McpErrorCodes.INVALID_PARAMS, ScenePath.format_node_error(node_path, scene_root))
+		return McpErrorCodes.make(McpErrorCodes.INVALID_PARAMS, McpScenePath.format_node_error(node_path, scene_root))
 
 	# Verify property exists
 	var found := false
@@ -164,7 +167,7 @@ func create_resource(params: Dictionary) -> Dictionary:
 	var resource_path: String = params.get("resource_path", "")
 	var overwrite: bool = params.get("overwrite", false)
 
-	var home_err := ResourceIO.validate_home(params)
+	var home_err := McpResourceIO.validate_home(params)
 	if home_err != null:
 		return home_err
 	var has_file_target := not resource_path.is_empty()
@@ -292,9 +295,9 @@ func _assign_created_resource(res: Resource, type_str: String, node_path: String
 	if scene_root == null:
 		return McpErrorCodes.make(McpErrorCodes.EDITOR_NOT_READY, "No scene open")
 
-	var node := ScenePath.resolve(node_path, scene_root)
+	var node := McpScenePath.resolve(node_path, scene_root)
 	if node == null:
-		return McpErrorCodes.make(McpErrorCodes.INVALID_PARAMS, ScenePath.format_node_error(node_path, scene_root))
+		return McpErrorCodes.make(McpErrorCodes.INVALID_PARAMS, McpScenePath.format_node_error(node_path, scene_root))
 
 	var found := false
 	var prop_type: int = TYPE_NIL
@@ -335,11 +338,11 @@ func _assign_created_resource(res: Resource, type_str: String, node_path: String
 
 
 func _save_created_resource(res: Resource, type_str: String, resource_path: String, overwrite: bool, applied_count: int) -> Dictionary:
-	return ResourceIO.save_to_disk(res, resource_path, overwrite, "Resource", {
+	return McpResourceIO.save_to_disk(res, resource_path, overwrite, "Resource", {
 		"type": type_str,
 		"resource_class": res.get_class(),
 		"properties_applied": applied_count,
-	})
+	}, _connection)
 
 
 ## Introspect a Resource class — return its editor-visible properties, parent,

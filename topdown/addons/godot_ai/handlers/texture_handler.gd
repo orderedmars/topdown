@@ -1,16 +1,19 @@
 @tool
-class_name TextureHandler
 extends RefCounted
 
 ## Creates procedural textures — GradientTexture2D (wrapping a Gradient)
 ## and NoiseTexture2D (wrapping a FastNoiseLite). Assigns to a node slot
 ## (undoable, bundles sub-resources) or saves to a .tres file.
 
+const NodeHandler := preload("res://addons/godot_ai/handlers/node_handler.gd")
+
 var _undo_redo: EditorUndoRedoManager
+var _connection: McpConnection
 
 
-func _init(undo_redo: EditorUndoRedoManager) -> void:
+func _init(undo_redo: EditorUndoRedoManager, connection: McpConnection = null) -> void:
 	_undo_redo = undo_redo
+	_connection = connection
 
 
 const _FILL_MODES := {
@@ -50,7 +53,7 @@ func create_gradient_texture(params: Dictionary) -> Dictionary:
 			"Invalid fill '%s'. Valid: %s" % [fill, ", ".join(_FILL_MODES.keys())]
 		)
 
-	var home_err := ResourceIO.validate_home(params)
+	var home_err := McpResourceIO.validate_home(params)
 	if home_err != null:
 		return home_err
 
@@ -110,7 +113,7 @@ func create_noise_texture(params: Dictionary) -> Dictionary:
 			"Invalid noise_type '%s'. Valid: %s" % [noise_type, ", ".join(_NOISE_TYPES.keys())]
 		)
 
-	var home_err := ResourceIO.validate_home(params)
+	var home_err := McpResourceIO.validate_home(params)
 	if home_err != null:
 		return home_err
 
@@ -144,7 +147,7 @@ func _finalize(tex: Resource, sub_resources: Array, params: Dictionary, label: S
 	var overwrite: bool = params.get("overwrite", false)
 
 	if not resource_path.is_empty():
-		return ResourceIO.save_to_disk(tex, resource_path, overwrite, label, extra)
+		return McpResourceIO.save_to_disk(tex, resource_path, overwrite, label, extra, _connection)
 	return _assign_texture(tex, sub_resources, node_path, property, label, extra)
 
 
@@ -152,9 +155,9 @@ func _assign_texture(tex: Resource, sub_resources: Array, node_path: String, pro
 	var scene_root := EditorInterface.get_edited_scene_root()
 	if scene_root == null:
 		return McpErrorCodes.make(McpErrorCodes.EDITOR_NOT_READY, "No scene open")
-	var node := ScenePath.resolve(node_path, scene_root)
+	var node := McpScenePath.resolve(node_path, scene_root)
 	if node == null:
-		return McpErrorCodes.make(McpErrorCodes.INVALID_PARAMS, ScenePath.format_node_error(node_path, scene_root))
+		return McpErrorCodes.make(McpErrorCodes.INVALID_PARAMS, McpScenePath.format_node_error(node_path, scene_root))
 
 	var found := false
 	var prop_type: int = TYPE_NIL

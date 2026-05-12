@@ -1,0 +1,99 @@
+[gd_scene format=3 uid="uid://bee11tpuy6ltd"]
+
+[ext_resource type="Script" uid="uid://dg4beyh54w24j" path="res://ui/character_creation.gd" id="1_script"]
+
+[node name="CharacterCreation" type="Control" unique_id=1590230048]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="BG" type="ColorRect" parent="." unique_id=1511493483]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.07, 0.1, 1)
+
+[node name="Panel" type="Panel" parent="." unique_id=28330416]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -260.0
+offset_right = 320.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel" unique_id=1751538593]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin" unique_id=1456565428]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Panel/Margin/VBox" unique_id=1380177712]
+layout_mode = 2
+text = "Create Your Adventurer"
+horizontal_alignment = 1
+
+[node name="NameInput" type="LineEdit" parent="Panel/Margin/VBox" unique_id=1111225578]
+layout_mode = 2
+placeholder_text = "Name"
+
+[node name="HBox" type="HBoxContainer" parent="Panel/Margin/VBox" unique_id=1282003391]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="RaceColumn" type="VBoxContainer" parent="Panel/Margin/VBox/HBox" unique_id=640460312]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RaceLabel" type="Label" parent="Panel/Margin/VBox/HBox/RaceColumn" unique_id=395117705]
+layout_mode = 2
+text = "RACE"
+horizontal_alignment = 1
+
+[node name="RaceButtons" type="VBoxContainer" parent="Panel/Margin/VBox/HBox/RaceColumn" unique_id=194640434]
+layout_mode = 2
+
+[node name="ClassColumn" type="VBoxContainer" parent="Panel/Margin/VBox/HBox" unique_id=1642535973]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ClassLabel" type="Label" parent="Panel/Margin/VBox/HBox/ClassColumn" unique_id=2019072344]
+layout_mode = 2
+text = "CLASS"
+horizontal_alignment = 1
+
+[node name="ClassButtons" type="VBoxContainer" parent="Panel/Margin/VBox/HBox/ClassColumn" unique_id=1577868033]
+layout_mode = 2
+
+[node name="PreviewLabel" type="Label" parent="Panel/Margin/VBox" unique_id=474291336]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+text = "Pick a race and a class."
+autowrap_mode = 2
+
+[node name="ConfirmButton" type="Button" parent="Panel/Margin/VBox" unique_id=767142671]
+layout_mode = 2
+text = "Begin"

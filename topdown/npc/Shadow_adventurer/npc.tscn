@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://b8m3y5q1x2j6u"]
+
+[ext_resource type="Script" path="res://npc/npc_base.gd" id="1_npc"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_npc"]
+size = Vector2(32, 32)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_int"]
+radius = 50.0
+
+[node name="NPC" type="CharacterBody2D" unique_id=138142481]
+script = ExtResource("1_npc")
+npc_name = "Shadow Adventurer"
+greeting_idle = "Looking for a partner? This dungeon is suicide alone."
+greeting_party = "Yes, leader?"
+
+[node name="Sprite" type="ColorRect" parent="." unique_id=1018148511]
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = 16.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=339277508]
+shape = SubResource("RectangleShape2D_npc")
+
+[node name="InteractionZone" type="Area2D" parent="." unique_id=652518762]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionZone" unique_id=1977939378]
+shape = SubResource("CircleShape2D_int")
+
+[node name="InteractionLabel" type="Label" parent="." unique_id=44949325]
+z_index = 20
+offset_left = -50.0
+offset_top = -40.0
+offset_right = 50.0
+offset_bottom = -17.0
+text = "Press E to Talk"
+horizontal_alignment = 1
+
+[connection signal="body_entered" from="InteractionZone" to="." method="_on_interaction_zone_body_entered"]
+[connection signal="body_exited" from="InteractionZone" to="." method="_on_interaction_zone_body_exited"]

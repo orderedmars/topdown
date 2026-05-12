@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="LootTable" format=3 uid="uid://b4gpk1nlivthe"]
+
+[ext_resource type="Script" uid="uid://c4qdssdu5ael1" path="res://items/loot_table.gd" id="1_lt"]
+[ext_resource type="Script" uid="uid://ymgvwmpsae5c" path="res://items/loot_entry.gd" id="2_le"]
+[ext_resource type="Resource" path="res://items/potions/health_potion.tres" id="3_hp"]
+[ext_resource type="Resource" path="res://items/potions/mana_potion.tres" id="4_mp"]
+
+[sub_resource type="Resource" id="LootEntry_hp"]
+script = ExtResource("2_le")
+item = ExtResource("3_hp")
+drop_chance = 0.6
+
+[sub_resource type="Resource" id="LootEntry_mp"]
+script = ExtResource("2_le")
+item = ExtResource("4_mp")
+drop_chance = 0.4
+
+[resource]
+script = ExtResource("1_lt")
+container_drops = Array[ExtResource("2_le")]([SubResource("LootEntry_hp"), SubResource("LootEntry_mp")])
