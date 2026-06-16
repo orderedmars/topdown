@@ -15,6 +15,8 @@ func _physics_process(delta: float) -> void:
 func _on_body_entered(body):
 	if body.has_method("take_damage"):
 		body.take_damage(damage)
+		if body.is_in_group("enemy") and is_instance_valid(body) and body.health > 0:
+			BattleManager.start_battle(body)
 		queue_free()
 	elif body is StaticBody2D:
 		queue_free()

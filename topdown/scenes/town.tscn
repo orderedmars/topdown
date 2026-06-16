@@ -34,6 +34,7 @@ building_color = Color(0.3, 0.15, 0.5, 1)
 position = Vector2(0, -300)
 building_name = "Adventurers Guild"
 building_color = Color(0.5, 0.35, 0.2, 1)
+interior_scene_path = "res://scenes/adventurers_guild.tscn"
 
 [node name="AssassinsGuild" parent="." instance=ExtResource("6_building")]
 position = Vector2(400, -300)

@@ -28,16 +28,32 @@ extends Resource
 @export var room_templates: Array[RoomTemplate] = []
 
 @export_group("Room Counts")
-# Mandatory per floor — Isaac-style split. Plus 1 entry. Total 13 mandatory.
+# Mandatory minimums per floor. Total fixed mandatory = 16:
+#   1 entry + 1 campsite + 5 enemy + 2 miniboss + 3 random encounter
+#   + 2 chest + 1 merchant + 1 boss
 # Modifiers may override.
-@export var enemy_room_count: int = 6
-@export var miniboss_room_count: int = 2
-@export var random_encounter_count: int = 3
+@export var entry_room_count: int = 1
+@export var campsite_room_count: int = 1
+@export var enemy_room_min: int = 5
+@export var miniboss_room_min: int = 2
+@export var random_encounter_min: int = 3
+@export var chest_room_min: int = 2
+@export var merchant_room_count: int = 1
 @export var boss_room_count: int = 1
-# Extras drawn at random from non-mandatory templates in `room_templates`
-# (treasure / shop / curse / altar / library / trap_gauntlet / statue / vault).
-# Default 5 per floor → 18 rooms total.
-@export var extra_room_count: int = 5
+
+# Extras rolled at gen time: a random count in [extra_room_min, extra_room_max].
+# Each extra slot draws from {CAMPSITE, RANDOM_ENCOUNTER, MINIBOSS, ENEMY, CHEST}.
+# Default 0-5 → total floor rooms in [16, 21].
+@export var extra_room_min: int = 0
+@export var extra_room_max: int = 5
+
+@export_group("Spawning")
+# How many enemies appear in each ENEMY room. Rolled per room at reveal time.
+@export var enemies_per_room_min: int = 2
+@export var enemies_per_room_max: int = 4
+# How many minibosses appear in each MINIBOSS room. Usually 1.
+@export var minibosses_per_room_min: int = 1
+@export var minibosses_per_room_max: int = 1
 
 @export_group("Per-Floor Modifiers")
 # Always-on modifiers for this floor (e.g. "all enemies are undead").

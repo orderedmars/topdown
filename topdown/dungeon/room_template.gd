@@ -6,40 +6,28 @@ extends Resource
 #   - hand-authored via `prefab_scene` (placed verbatim), or
 #   - generated procedurally via cellular automata using the parameters below.
 #
-# All room types the dungeon can generate:
+# Room types:
 #   ENTRY            spawn point + exit portal back to town (1 per floor)
-#   ENEMY            combat from floor's enemy pool (6 per floor)
-#   MINIBOSS         tougher curated combat (2 per floor)
-#   RANDOM_ENCOUNTER event from floor's encounter pool (3 per floor)
-#   BOSS             single boss; defeat unlocks stairs to next floor (1)
-#   TREASURE         guaranteed loot drop, no enemies
-#   SHOP             small in-dungeon vendor (potions, basic gear)
-#   CURSE            pay HP / karma for a powerful reward
-#   ALTAR            sacrifice an item to gain a blessing or buff
-#   LIBRARY          random skill scroll or knowledge gain
-#   TRAP_GAUNTLET    survive deadly traps for reward at the end
-#   STATUE           lore room with small reward
-#   VAULT            requires a key item; contains rare loot
+#   CAMPSITE         rest room; restores a small amount of HP/mana (1 per floor)
+#   ENEMY            combat from floor's enemy pool (>=5 per floor)
+#   MINIBOSS         tougher curated combat (>=2 per floor)
+#   RANDOM_ENCOUNTER event from floor's encounter pool (>=3 per floor)
+#   CHEST            guaranteed loot drop, no enemies (>=2 per floor)
+#   MERCHANT         small in-dungeon vendor (1 per floor)
+#   BOSS             single boss; defeat opens portal to next floor (1 per floor)
 #
-# Mandatory per floor: ENTRY + ENEMY×6 + MINIBOSS×2 + RANDOM_ENCOUNTER×3 + BOSS
-# = 13 rooms. Plus 5 extras drawn at random from the non-mandatory pool
-# (TREASURE / SHOP / CURSE / ALTAR / LIBRARY / TRAP_GAUNTLET / STATUE / VAULT)
-# → 18 rooms per floor.
+# Per-floor composition: 16 mandatory + 0-5 extras = 16-21 rooms total.
+# Extras pool: CAMPSITE, RANDOM_ENCOUNTER, MINIBOSS, ENEMY, CHEST.
 
 enum RoomType {
 	ENTRY,
+	CAMPSITE,
 	ENEMY,
 	MINIBOSS,
 	RANDOM_ENCOUNTER,
+	CHEST,
+	MERCHANT,
 	BOSS,
-	TREASURE,
-	SHOP,
-	CURSE,
-	ALTAR,
-	LIBRARY,
-	TRAP_GAUNTLET,
-	STATUE,
-	VAULT,
 }
 
 enum RoomSize { SMALL, MEDIUM, LARGE }

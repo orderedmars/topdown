@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://adventurer/adventurer_data.gd" id="1"]
+[ext_resource type="Resource" path="res://adventurer/races/human.tres" id="2"]
+[ext_resource type="Resource" path="res://adventurer/classes/warrior.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"gerda_the_brave"
+display_name = "Gerda the Brave"
+background = "A village watchwoman who once held the eastern gate alone for three nights. Reliable, blunt, and tired of farm work."
+portrait_color = Color(0.85, 0.55, 0.4, 1)
+race = ExtResource("2")
+current_class = ExtResource("3")
+level = 1
+max_health = 38
+max_mana = 4
+max_stamina = 55
+strength = 13
+dexterity = 10
+constitution = 13
+intelligence = 8
+wisdom = 10
+charisma = 10
+weapon_proficiencies = [&"sword", &"shield"]
+rarity = 0
+recruit_strength_tier = 1
+karma_alignment = 1
+hire_cost = 60
+min_strength_rep = 0

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://adventurer/adventurer_data.gd" id="1"]
+[ext_resource type="Resource" path="res://adventurer/races/elf.tres" id="2"]
+[ext_resource type="Resource" path="res://adventurer/classes/mage.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"sila_of_aelra"
+display_name = "Sila of Aelra"
+background = "An Aelran scholar exiled for studying combustion glyphs forbidden by the spire. Polite to a fault, until something is on fire."
+portrait_color = Color(0.6, 0.85, 0.7, 1)
+race = ExtResource("2")
+current_class = ExtResource("3")
+level = 2
+max_health = 24
+max_mana = 32
+max_stamina = 40
+strength = 8
+dexterity = 12
+constitution = 8
+intelligence = 16
+wisdom = 13
+charisma = 11
+weapon_proficiencies = [&"staff"]
+skill_proficiencies = [&"fire_magic", &"arcane"]
+rarity = 1
+recruit_strength_tier = 2
+karma_alignment = 1
+hire_cost = 130
+min_strength_rep = 0

@@ -4,10 +4,21 @@ enum State { IDLE, SUSPICIOUS, CHASING, SEARCHING }
 var current_state: State = State.IDLE
 
 @export var speed: float = 140.0
-@export var suspicion_time: float = 1.5   # seconds of continuous hearing before full chase
+@export var suspicion_time: float = 3.5   # seconds of continuous hearing before full chase
 @export var chase_timeout: float = 5.0    # seconds to rush last known pos after losing detection
 @export var search_wait_time: float = 3.0 # seconds to scan at last known pos before giving up
 @export var loot_table: LootTable = null  # assign in Inspector or leave null for no drops
+
+@export_group("Combat")
+@export var display_name: String = "Enemy"
+@export var max_health: float = 50.0
+@export var attack_damage: float = 6.0    # base hit landed in the battle scene
+@export var combat_initiative: int = 8    # rolled against player Dex for turn order
+
+# Status effects carried into the battle scene. Each entry is a Dictionary with
+# at least { "type": StringName, "turns": int }. Skills that apply effects (e.g.
+# poison-tipped arrows) push to this array before triggering BattleManager.
+var effects: Array[Dictionary] = []
 
 # Vision and hearing geometry is set via the CollisionShapes in the Inspector:
 #   VisionCone/CollisionShape2D  → ConvexPolygonShape2D  (forward triangle)
@@ -15,7 +26,7 @@ var current_state: State = State.IDLE
 # The player's DetectionZone radius (layer 4) grows when sprinting, shrinks when crouching.
 # Overlap between the player's noise radius and these zones triggers detection.
 
-var health: float = 50.0
+var health: float
 var target: Node2D = null
 var last_known_position: Vector2
 var state_timer: float = 0.0
@@ -31,17 +42,21 @@ const SCAN_SPEED: float = 0.5 # radians/sec — how fast the enemy sweeps its vi
 @onready var outline: ReferenceRect = $Outline
 @onready var health_bar: ProgressBar = $HealthBarContainer/ProgressBar
 @onready var alert_label: Label = $AlertLabel
+@onready var nav_agent: NavigationAgent2D = $NavigationAgent2D
 
 func _ready() -> void:
 	add_to_group("enemy")
 	collision_layer = 2
 	collision_mask = 1
-	health_bar.max_value = 50.0
+	health = max_health
+	health_bar.max_value = max_health
 	health_bar.value = health
 	alert_label.hide()
 	last_known_position = global_position
 	vision_visual.color = Color(1, 1, 0, 0.12)
 	hearing_visual.color = Color(1, 0, 0, 0.05)
+	if has_node("MeleeRange"):
+		($MeleeRange as Area2D).body_entered.connect(_on_melee_range_entered)
 
 func _physics_process(delta: float) -> void:
 	outline.visible = is_highlighted
@@ -53,7 +68,7 @@ func _physics_process(delta: float) -> void:
 			# Sweep the vision cone left and right so it has a purpose when idle.
 			# sin() makes it oscillate naturally without a hard reversal.
 			state_timer += delta
-			rotation += SCAN_SPEED * sin(state_timer * 1.2) * delta
+			vision_cone.rotation += SCAN_SPEED * sin(state_timer * 1.2) * delta
 
 			if check_vision():
 				start_chase()
@@ -68,7 +83,7 @@ func _physics_process(delta: float) -> void:
 			# Turn toward the source of the sound while building suspicion.
 			if target:
 				var angle_to = (target.global_position - global_position).angle()
-				rotation = lerp_angle(rotation, angle_to, 3.0 * delta)
+				vision_cone.rotation = lerp_angle(vision_cone.rotation, angle_to, 3.0 * delta)
 
 			if check_vision():
 				# Saw them — no need to wait, chase immediately.
@@ -89,21 +104,18 @@ func _physics_process(delta: float) -> void:
 			alert_label.modulate = Color.RED
 
 			if check_vision() or check_hearing():
-				# Player still detected — update memory and pursue directly.
+				# Player still detected — update memory and pursue.
 				last_known_position = target.global_position
 				state_timer = chase_timeout
-				var dir = (target.global_position - global_position).normalized()
-				velocity = dir * speed
-				rotation = lerp_angle(rotation, dir.angle(), 10.0 * delta)
+				_steer_along_nav(target.global_position, speed, 10.0, delta)
 			else:
 				# Lost detection — rush to last known position.
 				state_timer -= delta
 				if state_timer <= 0.0:
 					start_searching()
+					velocity = Vector2.ZERO
 				else:
-					var dir = (last_known_position - global_position).normalized()
-					velocity = dir * speed * 0.8
-					rotation = lerp_angle(rotation, dir.angle(), 5.0 * delta)
+					_steer_along_nav(last_known_position, speed * 0.8, 5.0, delta)
 
 		State.SEARCHING:
 			# Enemy arrived at last known position and is scanning for the player.
@@ -118,19 +130,37 @@ func _physics_process(delta: float) -> void:
 			var dist = global_position.distance_to(last_known_position)
 			if dist > 15.0:
 				# Still travelling to last known position.
-				var dir = (last_known_position - global_position).normalized()
-				velocity = dir * speed * 0.6
-				rotation = lerp_angle(rotation, dir.angle(), 3.0 * delta)
+				_steer_along_nav(last_known_position, speed * 0.6, 3.0, delta)
 			else:
 				# Arrived — sweep and wait before giving up.
 				velocity = Vector2.ZERO
 				state_timer -= delta
-				rotation += SCAN_SPEED * 1.5 * sin(state_timer * 2.0) * delta
+				vision_cone.rotation += SCAN_SPEED * 1.5 * sin(state_timer * 2.0) * delta
 				if state_timer <= 0.0:
 					current_state = State.IDLE
 
 	move_and_slide()
 	update_visual_polygons()
+
+# --- Steering ---
+
+# Drive velocity toward the next waypoint on the navigation agent's path.
+# Routing through the agent (rather than a straight line to the target) is what
+# keeps enemies from pressing into corridor walls when the player isn't aligned
+# with the corridor axis.
+func _steer_along_nav(target_pos: Vector2, move_speed: float, rot_lerp: float, delta: float) -> void:
+	nav_agent.target_position = target_pos
+	if nav_agent.is_navigation_finished():
+		velocity = Vector2.ZERO
+		return
+	var next_pos := nav_agent.get_next_path_position()
+	var dir := (next_pos - global_position).normalized()
+	velocity = dir * move_speed
+	# Only rotate the vision cone (the enemy's "look direction"). The body stays
+	# upright so pixel-art sprites don't tilt — they'll read vision_cone.rotation
+	# to pick a facing frame.
+	vision_cone.rotation = lerp_angle(vision_cone.rotation, dir.angle(), rot_lerp * delta)
+
 
 # --- Detection helpers ---
 
@@ -182,8 +212,23 @@ func take_damage(amt: float):
 		target = player
 		start_chase()
 	if health <= 0:
-		_spawn_loot.call_deferred()
-		queue_free()
+		die()
+
+
+# Finishes the enemy off: spawns loot and removes the node. Called by take_damage
+# when health hits 0, and by BattleManager after a battle is won (so a player
+# kill inside the battle scene drops loot in the dungeon the same way a kill
+# outside it would).
+func die() -> void:
+	_spawn_loot.call_deferred()
+	queue_free()
+
+
+func _on_melee_range_entered(body: Node2D) -> void:
+	if not body.is_in_group("player"):
+		return
+	BattleManager.start_battle(self)
+
 
 func apply_trap_damage(amt: float):
 	take_damage(amt)

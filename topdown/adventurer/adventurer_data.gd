@@ -51,6 +51,20 @@ enum Rarity { COMMON, UNCOMMON, RARE, EPIC, LEGENDARY }
 @export var hire_cost: int = 100
 # Empty = always available. Otherwise gated behind the named achievement.
 @export var unlock_achievement: StringName = ""
+# Hard floor: this adventurer never appears in the guild pool unless the
+# player's strength_rep is at least this value. Soft tier weighting handles
+# everything above the floor.
+@export var min_strength_rep: int = 0
+# Karma floor/ceiling for appearing in the pool at all. Defaults are wide
+# so most recruits are unrestricted. Use to gate alignment-locked recruits
+# (e.g., a paladin who refuses to even show up for an evil player).
+@export var min_karma: int = -999
+@export var max_karma: int = 999
+# When true, once this recruit's other conditions (achievement / rep / karma)
+# are satisfied, they are PINNED into the guild roll every refresh until
+# hired this run. The remaining slots fill normally. Use for "secret" or
+# story-flagged adventurers that should appear reliably once unlocked.
+@export var guaranteed_spawn: bool = false
 
 @export_group("Run State")
 @export var is_dead: bool = false

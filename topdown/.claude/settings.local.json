@@ -10,7 +10,9 @@
       "mcp__godot-ai__editor_screenshot",
       "mcp__godot-ai__node_create",
       "mcp__godot-ai__node_set_property",
-      "mcp__godot-ai__project_run"
+      "mcp__godot-ai__project_run",
+      "PowerShell(& \"C:\\\\Program Files\\\\Git\\\\bin\\\\git.exe\" log --oneline -15)",
+      "PowerShell(Remove-Item *)"
     ]
   }
 }

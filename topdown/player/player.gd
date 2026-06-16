@@ -132,7 +132,9 @@ func update_targeting_logic():
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact"):
 		check_for_interactions()
-	
+	elif event.is_action_pressed("talk"):
+		check_for_talk()
+
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if current_skill_mode != SkillMode.NONE and can_cast:
@@ -145,8 +147,10 @@ func _input(event: InputEvent) -> void:
 			_adjust_zoom(-0.2)
 
 func check_for_interactions():
-	# Loot containers take priority so the player doesn't accidentally talk to an NPC
-	# while trying to pick something up.
+	# E handles world objects only — loot containers and buildings.
+	# Talking to NPCs lives on its own key so the player can't accidentally
+	# strike up a conversation while trying to enter a building or open
+	# a chest near a wandering NPC.
 	var containers = get_tree().get_nodes_in_group("loot_container")
 	for container in containers:
 		if global_position.distance_to(container.global_position) < 60.0:
@@ -154,18 +158,20 @@ func check_for_interactions():
 				container.interact()
 				return
 
-	var npcs = get_tree().get_nodes_in_group("npc")
-	for npc in npcs:
-		if global_position.distance_to(npc.global_position) < 60.0:
-			if npc.has_method("interact"):
-				npc.interact()
-				return
-
 	var buildings = get_tree().get_nodes_in_group("building")
 	for building in buildings:
 		if "player_in_zone" in building and building.player_in_zone:
 			if building.has_method("interact"):
 				building.interact()
+				return
+
+
+func check_for_talk():
+	var npcs = get_tree().get_nodes_in_group("npc")
+	for npc in npcs:
+		if global_position.distance_to(npc.global_position) < 60.0:
+			if npc.has_method("interact"):
+				npc.interact()
 				return
 
 func _adjust_zoom(delta: float) -> void:

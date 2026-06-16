@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://adventurer/adventurer_data.gd" id="1"]
+[ext_resource type="Resource" path="res://adventurer/races/orc.tres" id="2"]
+[ext_resource type="Resource" path="res://adventurer/classes/warrior.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"dura_stoneback"
+display_name = "Dura Stoneback"
+background = "Took an arrow to the spine and walked home anyway. Doesn't speak much — when she does, it's worth listening. Carries a tower shield older than the town."
+portrait_color = Color(0.4, 0.5, 0.35, 1)
+race = ExtResource("2")
+current_class = ExtResource("3")
+level = 4
+max_health = 70
+max_mana = 2
+max_stamina = 50
+strength = 17
+dexterity = 7
+constitution = 18
+intelligence = 8
+wisdom = 12
+charisma = 9
+weapon_proficiencies = [&"hammer", &"tower_shield"]
+skill_proficiencies = [&"guard", &"taunt"]
+rarity = 2
+recruit_strength_tier = 3
+karma_alignment = 0
+hire_cost = 300
+min_strength_rep = 2

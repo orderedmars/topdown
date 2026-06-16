@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://adventurer/adventurer_data.gd" id="1"]
+[ext_resource type="Resource" path="res://adventurer/races/elf.tres" id="2"]
+[ext_resource type="Resource" path="res://adventurer/classes/rogue.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"faelin_moondrop"
+display_name = "Faelin Moondrop"
+background = "A glassblower's daughter who learned to throw daggers at carnival booths. Now she throws them at slightly more expensive targets."
+portrait_color = Color(0.75, 0.95, 0.85, 1)
+race = ExtResource("2")
+current_class = ExtResource("3")
+level = 3
+max_health = 30
+max_mana = 10
+max_stamina = 70
+strength = 9
+dexterity = 17
+constitution = 9
+intelligence = 13
+wisdom = 12
+charisma = 13
+weapon_proficiencies = [&"thrown", &"dagger"]
+skill_proficiencies = [&"stealth", &"acrobatics"]
+rarity = 2
+recruit_strength_tier = 3
+karma_alignment = 0
+hire_cost = 280
+min_strength_rep = 3
