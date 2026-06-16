@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://adventurer/adventurer_data.gd" id="1"]
+[ext_resource type="Resource" path="res://adventurer/races/elf.tres" id="2"]
+[ext_resource type="Resource" path="res://adventurer/classes/rogue.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"shadow_adventurer"
+display_name = "Shadow Adventurer"
+background = "Nobody is sure when they joined the guild — only that the chair in the back corner is theirs. Word is they have walked every floor below and come back unchanged."
+portrait_color = Color(0.2, 0.2, 0.25, 1)
+race = ExtResource("2")
+current_class = ExtResource("3")
+level = 6
+max_health = 48
+max_mana = 24
+max_stamina = 80
+strength = 13
+dexterity = 19
+constitution = 12
+intelligence = 14
+wisdom = 15
+charisma = 12
+weapon_proficiencies = [&"dagger", &"shortsword"]
+skill_proficiencies = [&"stealth", &"shadow_magic", &"assassination"]
+rarity = 4
+recruit_strength_tier = 5
+karma_alignment = 0
+hire_cost = 900
+min_strength_rep = 10
+guaranteed_spawn = true

@@ -6,61 +6,54 @@
 size = Vector2(32, 32)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_ppra6"]
-radius = 150.0
+radius = 280.0
 
 [sub_resource type="ConvexPolygonShape2D" id="ConvexPolygonShape2D_2mvqj"]
-points = PackedVector2Array(0, 0, 0, 0, 0, 0)
+points = PackedVector2Array(0, 0, 320, -90, 320, 90)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_melee"]
+radius = 28.0
 
 [node name="Enemy" type="CharacterBody2D" unique_id=2116036945]
-input_pickable = true
 script = ExtResource("1_2mvqj")
 
-[node name="Sprite" type="ColorRect" parent="." unique_id=1788649480]
+[node name="Sprite" type="ColorRect" parent="." unique_id=134528958]
 offset_left = -16.0
 offset_top = -16.0
 offset_right = 16.0
 offset_bottom = 16.0
-color = Color(1, 0.2, 0.2, 0.53333336)
+color = Color(1, 0.2, 0.2, 0.5)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1193526312]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1294383952]
 shape = SubResource("RectangleShape2D_ofsxj")
 
-[node name="DetectionZone" type="Area2D" parent="." unique_id=863488578]
-collision_layer = 4
-collision_mask = 0
+[node name="DetectionZone" type="Area2D" parent="." unique_id=1921058648]
+collision_layer = 0
+collision_mask = 4
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="DetectionZone" unique_id=2038034241]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DetectionZone" unique_id=9559222]
 shape = SubResource("CircleShape2D_ppra6")
 
-[node name="DebugCircle" type="ColorRect" parent="DetectionZone" unique_id=765378578]
-offset_left = -150.0
-offset_top = -150.0
-offset_right = 150.0
-offset_bottom = 150.0
-color = Color(1, 0, 0, 0.13333334)
+[node name="HearingVisual" type="Polygon2D" parent="DetectionZone" unique_id=1582860123]
 
-[node name="HearingVisual" type="Polygon2D" parent="DetectionZone" unique_id=463341531]
+[node name="VisionCone" type="Area2D" parent="." unique_id=1438017076]
+collision_layer = 0
+collision_mask = 4
 
-[node name="HealthBarContainer" type="Node2D" parent="." unique_id=993710310]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="VisionCone" unique_id=452121554]
+shape = SubResource("ConvexPolygonShape2D_2mvqj")
+
+[node name="VisionVisual" type="Polygon2D" parent="VisionCone" unique_id=1444533758]
+
+[node name="HealthBarContainer" type="Node2D" parent="." unique_id=397037006]
 position = Vector2(-25, -35)
 
-[node name="ProgressBar" type="ProgressBar" parent="HealthBarContainer" unique_id=1098972819]
+[node name="ProgressBar" type="ProgressBar" parent="HealthBarContainer" unique_id=491001055]
 custom_minimum_size = Vector2(50, 8)
 value = 100.0
 show_percentage = false
 
-[node name="RayCast2D" type="RayCast2D" parent="." unique_id=1484443247]
-
-[node name="VisionCone" type="Area2D" parent="." unique_id=39696779]
-collision_layer = 4
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="VisionCone" unique_id=1291585982]
-shape = SubResource("ConvexPolygonShape2D_2mvqj")
-
-[node name="VisionVisual" type="Polygon2D" parent="VisionCone" unique_id=527955245]
-
-[node name="Outline" type="ReferenceRect" parent="." unique_id=1359207655]
+[node name="Outline" type="ReferenceRect" parent="." unique_id=288165541]
 visible = false
 offset_left = -20.0
 offset_top = -20.0
@@ -68,3 +61,27 @@ offset_right = 20.0
 offset_bottom = 20.0
 border_color = Color(1, 1, 0, 1)
 editor_only = false
+
+[node name="AlertLabel" type="Label" parent="." unique_id=1522009181]
+offset_left = -20.0
+offset_top = -65.0
+offset_right = 20.0
+offset_bottom = -30.0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 24
+text = "?"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="." unique_id=2034910011]
+path_desired_distance = 8.0
+target_desired_distance = 12.0
+radius = 16.0
+
+[node name="MeleeRange" type="Area2D" parent="." unique_id=1741209855]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="MeleeRange" unique_id=1741209856]
+shape = SubResource("CircleShape2D_melee")

@@ -1,37 +1,50 @@
 @tool
-class_name EditorHandler
 extends RefCounted
+
+const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const Telemetry := preload("res://addons/godot_ai/telemetry.gd")
 
 ## Handles editor state, selection, log, screenshot, and performance commands.
 
+const UpdateMixedState := preload("res://addons/godot_ai/utils/update_mixed_state.gd")
+
 var _log_buffer: McpLogBuffer
-var _connection: Connection
+var _connection: McpConnection
 var _debugger_plugin: McpDebuggerPlugin
-var _game_log_buffer: GameLogBuffer
+var _game_log_buffer: McpGameLogBuffer
+var _editor_log_buffer: McpEditorLogBuffer
 
 
-func _init(log_buffer: McpLogBuffer, connection: Connection = null, debugger_plugin: McpDebuggerPlugin = null, game_log_buffer: GameLogBuffer = null) -> void:
+func _init(log_buffer: McpLogBuffer, connection: McpConnection = null, debugger_plugin: McpDebuggerPlugin = null, game_log_buffer: McpGameLogBuffer = null, editor_log_buffer: McpEditorLogBuffer = null) -> void:
 	_log_buffer = log_buffer
 	_connection = connection
 	_debugger_plugin = debugger_plugin
 	_game_log_buffer = game_log_buffer
+	_editor_log_buffer = editor_log_buffer
 
 
 func get_editor_state(_params: Dictionary) -> Dictionary:
 	var scene_root := EditorInterface.get_edited_scene_root()
-	return {
-		"data": {
-			"godot_version": Engine.get_version_info().get("string", "unknown"),
-			"project_name": ProjectSettings.get_setting("application/config/name", ""),
-			"current_scene": scene_root.scene_file_path if scene_root else "",
-			"is_playing": EditorInterface.is_playing_scene(),
-			"readiness": Connection.get_readiness(),
-			## True once the game subprocess autoload has beaconed mcp:hello;
-			## false between Play→Stop cycles. Lets capture-source=game callers
-			## poll for a real ready signal instead of guessing with sleep().
-			"game_capture_ready": _debugger_plugin != null and _debugger_plugin._game_ready,
-		}
+	var data := {
+		"godot_version": Engine.get_version_info().get("string", "unknown"),
+		"project_name": ProjectSettings.get_setting("application/config/name", ""),
+		"current_scene": scene_root.scene_file_path if scene_root else "",
+		"is_playing": EditorInterface.is_playing_scene(),
+		"readiness": McpConnection.get_readiness(),
+		## True once the game subprocess autoload has beaconed mcp:hello;
+		## false between Play→Stop cycles. Lets capture-source=game callers
+		## poll for a real ready signal instead of guessing with sleep().
+		"game_capture_ready": _debugger_plugin != null and _debugger_plugin.is_game_capture_ready(),
 	}
+	## Half-installed addon tree from a failed self-update rollback. When
+	## non-empty, the agent / dock paint the operator-facing recovery copy
+	## from `update_mixed_state.gd::diagnose`. Field omitted when the
+	## addons tree is clean so editor_state's normal payload stays small.
+	## See issue #354 / audit-v2 #10.
+	var mixed_state := UpdateMixedState.diagnose()
+	if not mixed_state.is_empty():
+		data["mixed_state"] = mixed_state
+	return {"data": data}
 
 
 func get_selection(_params: Dictionary) -> Dictionary:
@@ -39,11 +52,11 @@ func get_selection(_params: Dictionary) -> Dictionary:
 	var selected := EditorInterface.get_selection().get_selected_nodes()
 	var paths: Array[String] = []
 	for node in selected:
-		paths.append(ScenePath.from_node(node, scene_root))
+		paths.append(McpScenePath.from_node(node, scene_root))
 	return {"data": {"selected_paths": paths, "count": paths.size()}}
 
 
-const VALID_LOG_SOURCES := ["plugin", "game", "all"]
+const VALID_LOG_SOURCES := ["plugin", "game", "editor", "all"]
 
 
 func get_logs(params: Dictionary) -> Dictionary:
@@ -54,9 +67,9 @@ func get_logs(params: Dictionary) -> Dictionary:
 	var offset: int = maxi(0, int(params.get("offset", 0)))
 	var source: String = str(params.get("source", "plugin"))
 	if not source in VALID_LOG_SOURCES:
-		return McpErrorCodes.make(
-			McpErrorCodes.INVALID_PARAMS,
-			"Invalid source '%s' — use 'plugin', 'game', or 'all'" % source,
+		return ErrorCodes.make(
+			ErrorCodes.VALUE_OUT_OF_RANGE,
+			"Invalid source '%s' — use 'plugin', 'game', 'editor', or 'all'" % source,
 		)
 
 	match source:
@@ -64,9 +77,11 @@ func get_logs(params: Dictionary) -> Dictionary:
 			return _get_plugin_logs(count, offset)
 		"game":
 			return _get_game_logs(count, offset)
+		"editor":
+			return _get_editor_logs(count, offset)
 		"all":
 			return _get_all_logs(count, offset)
-	return McpErrorCodes.make(McpErrorCodes.INTERNAL_ERROR, "Unreachable")
+	return ErrorCodes.make(ErrorCodes.INTERNAL_ERROR, "Unreachable")
 
 
 func _get_plugin_logs(count: int, offset: int) -> Dictionary:
@@ -115,14 +130,49 @@ func _get_game_logs(count: int, offset: int) -> Dictionary:
 	}
 
 
+func _get_editor_logs(count: int, offset: int) -> Dictionary:
+	## Editor-process script errors (parse errors, @tool runtime errors,
+	## EditorPlugin errors, push_error/push_warning). Captured by
+	## editor_logger.gd via OS.add_logger and gated on Godot 4.5+; on older
+	## engines or before plugin enable the buffer is null/empty and we
+	## return an empty page so callers can poll unconditionally.
+	if _editor_log_buffer == null:
+		return {
+			"data": {
+				"source": "editor",
+				"lines": [],
+				"total_count": 0,
+				"returned_count": 0,
+				"offset": offset,
+				"dropped_count": 0,
+			}
+		}
+	var page := _editor_log_buffer.get_range(offset, count)
+	return {
+		"data": {
+			"source": "editor",
+			"lines": page,
+			"total_count": _editor_log_buffer.total_count(),
+			"returned_count": page.size(),
+			"offset": offset,
+			"dropped_count": _editor_log_buffer.dropped_count(),
+		}
+	}
+
+
 func _get_all_logs(count: int, offset: int) -> Dictionary:
 	## Plugin lines have no timestamp, so we can't merge chronologically.
-	## Concatenate plugin then game and apply the offset/count window over
-	## the combined list. The per-line `source` field tells callers where
-	## each entry came from.
+	## Concatenate plugin → editor → game and apply the offset/count window
+	## over the combined list. The per-line `source` field tells callers
+	## where each entry came from. Editor goes between plugin and game so
+	## script errors stay grouped near the plugin recv/send traffic that
+	## triggered them, with game runtime logs at the end.
 	var combined: Array[Dictionary] = []
 	for line in _log_buffer.get_recent(_log_buffer.total_count()):
 		combined.append({"source": "plugin", "level": "info", "text": line})
+	if _editor_log_buffer != null:
+		for entry in _editor_log_buffer.get_range(0, _editor_log_buffer.total_count()):
+			combined.append(entry)
 	if _game_log_buffer != null:
 		for entry in _game_log_buffer.get_range(0, _game_log_buffer.total_count()):
 			combined.append(entry)
@@ -135,6 +185,8 @@ func _get_all_logs(count: int, offset: int) -> Dictionary:
 	if _game_log_buffer != null:
 		run_id = _game_log_buffer.run_id()
 		dropped = _game_log_buffer.dropped_count()
+	if _editor_log_buffer != null:
+		dropped += _editor_log_buffer.dropped_count()
 	return {
 		"data": {
 			"source": "all",
@@ -226,34 +278,45 @@ func take_screenshot(params: Dictionary) -> Dictionary:
 		"viewport":
 			viewport = EditorInterface.get_editor_viewport_3d()
 			if viewport == null:
-				return McpErrorCodes.make(McpErrorCodes.EDITOR_NOT_READY, "No 3D viewport available")
+				return ErrorCodes.make(ErrorCodes.EDITOR_NOT_READY, "No 3D viewport available")
+			## The 3D viewport's texture is empty when the edited scene
+			## has no Node3D content (2D-only scene, or no scene open),
+			## and the empty-image guard further down used to surface
+			## that as INTERNAL_ERROR — leaving callers with no signal
+			## that the failure was caller-side. Reject up front with a
+			## structured hint so the LLM can pick a sensible next step
+			## (open a 3D scene, switch to source="cinematic", etc.).
+			var precheck := viewport_screenshot_precheck(EditorInterface.get_edited_scene_root())
+			if precheck.has("error"):
+				return precheck
 		"game":
 			if not EditorInterface.is_playing_scene():
-				return McpErrorCodes.make(McpErrorCodes.INVALID_PARAMS, "Game is not running — use source='viewport' or start the project first")
+				return ErrorCodes.make(ErrorCodes.INVALID_PARAMS, "Game is not running — use source='viewport' or start the project first")
 			## The game is always a separate OS process (embedded mode just
 			## reparents its window into the editor). Reach the framebuffer
 			## via the debugger channel: the `_mcp_game_helper` autoload
 			## inside the game process replies with a PNG, and
 			## McpDebuggerPlugin pushes the response back through our
-			## WebSocket with the same request_id via Connection.send_deferred_response.
+			## WebSocket with the same request_id via McpConnection.send_deferred_response.
 			if _debugger_plugin == null or _connection == null:
-				return McpErrorCodes.make(McpErrorCodes.INTERNAL_ERROR, "Debugger bridge unavailable — plugin may not be fully initialised")
+				return ErrorCodes.make(ErrorCodes.INTERNAL_ERROR, "Debugger bridge unavailable — plugin may not be fully initialised")
 			var request_id: String = params.get("_request_id", "")
 			if request_id.is_empty():
-				return McpErrorCodes.make(McpErrorCodes.INTERNAL_ERROR, "Missing request_id — cannot correlate deferred response")
+				return ErrorCodes.make(ErrorCodes.INTERNAL_ERROR, "Missing request_id — cannot correlate deferred response")
 			_debugger_plugin.request_game_screenshot(request_id, max_resolution, _connection)
 			return McpDispatcher.DEFERRED_RESPONSE
 		"cinematic":
 			return _take_cinematic_screenshot(max_resolution)
 		_:
-			return McpErrorCodes.make(McpErrorCodes.INVALID_PARAMS, "Invalid source '%s' — use 'viewport', 'cinematic', or 'game'" % source)
+			return ErrorCodes.make(ErrorCodes.VALUE_OUT_OF_RANGE, "Invalid source '%s' — use 'viewport', 'cinematic', or 'game'" % source)
 
 	## Handle view_target: temporarily reposition the editor's own camera to
 	## frame one or more target nodes, force a render, capture, then restore.
 	if not view_target.is_empty() and source == "viewport":
-		var scene_root := EditorInterface.get_edited_scene_root()
-		if scene_root == null:
-			return McpErrorCodes.make(McpErrorCodes.EDITOR_NOT_READY, "No scene open")
+		var _scene_check := McpNodeValidator.require_scene_or_error()
+		if _scene_check.has("error"):
+			return _scene_check
+		var scene_root: Node = _scene_check.scene_root
 
 		## Parse comma-separated paths, deduplicate
 		var raw_paths := view_target.split(",")
@@ -269,7 +332,7 @@ func take_screenshot(params: Dictionary) -> Dictionary:
 		var targets: Array[Node3D] = []
 		var not_found: Array[String] = []
 		for p in unique_paths:
-			var node := ScenePath.resolve(p, scene_root)
+			var node := McpScenePath.resolve(p, scene_root)
 			if node == null:
 				not_found.append(p)
 			elif not node is Node3D:
@@ -278,11 +341,11 @@ func take_screenshot(params: Dictionary) -> Dictionary:
 				targets.append(node as Node3D)
 
 		if targets.is_empty():
-			return McpErrorCodes.make(McpErrorCodes.INVALID_PARAMS, "No valid Node3D targets found: %s" % ", ".join(not_found))
+			return ErrorCodes.make(ErrorCodes.NODE_NOT_FOUND, "No valid Node3D targets found: %s" % ", ".join(not_found))
 
 		var cam := viewport.get_camera_3d()
 		if cam == null:
-			return McpErrorCodes.make(McpErrorCodes.EDITOR_NOT_READY, "No camera in 3D viewport")
+			return ErrorCodes.make(ErrorCodes.EDITOR_NOT_READY, "No camera in 3D viewport")
 
 		## Merge AABBs from all targets
 		var combined_aabb := _get_visual_aabb(targets[0])
@@ -332,7 +395,10 @@ func take_screenshot(params: Dictionary) -> Dictionary:
 			## Consistent with single-shot path: error if no frames rendered
 			## (e.g. headless mode where force_draw produces no output).
 			if images.is_empty():
-				return McpErrorCodes.make(McpErrorCodes.INTERNAL_ERROR, "Coverage sweep rendered no images")
+				return _empty_image_error(
+					"viewport",
+					"Coverage sweep rendered no images. The 3D viewport produced no output across any of the preset angles — typically because the editor is in headless mode (force_draw has no rendered output) or the 3D viewport has not drawn a frame yet."
+				)
 
 			var aabb_center := combined_aabb.get_center()
 			var aabb_size := combined_aabb.size
@@ -370,7 +436,10 @@ func take_screenshot(params: Dictionary) -> Dictionary:
 		RenderingServer.camera_set_transform(cam_rid, saved_xform)
 
 		if image == null or image.is_empty():
-			return McpErrorCodes.make(McpErrorCodes.INTERNAL_ERROR, "Framed viewport rendered an empty image")
+			return _empty_image_error(
+				"viewport",
+				"Framed viewport rendered an empty image after repositioning the camera onto the view_target. The 3D viewport produced no output — typically headless mode or the 3D viewport has not drawn a frame yet."
+			)
 
 		var result := _finalize_image(image, "viewport", max_resolution)
 		result.data["view_target"] = view_target
@@ -392,7 +461,10 @@ func take_screenshot(params: Dictionary) -> Dictionary:
 	var image: Image = viewport.get_texture().get_image()
 
 	if image == null or image.is_empty():
-		return McpErrorCodes.make(McpErrorCodes.INTERNAL_ERROR, "Failed to capture image from %s" % source)
+		return _empty_image_error(
+			source,
+			"Captured an empty image from %s. The 3D viewport produced no output — typically headless mode or the 3D viewport has not drawn a frame yet." % source
+		)
 
 	return _finalize_image(image, source, max_resolution)
 
@@ -402,14 +474,15 @@ func take_screenshot(params: Dictionary) -> Dictionary:
 ## throwaway SubViewport, so the output has no editor gizmos, selection
 ## outlines, or grid lines.
 func _take_cinematic_screenshot(max_resolution: int) -> Dictionary:
-	var scene_root := EditorInterface.get_edited_scene_root()
-	if scene_root == null:
-		return McpErrorCodes.make(McpErrorCodes.EDITOR_NOT_READY, "No scene open")
+	var _scene_check := McpNodeValidator.require_scene_or_error()
+	if _scene_check.has("error"):
+		return _scene_check
+	var scene_root: Node = _scene_check.scene_root
 
 	var scene_camera := _find_current_camera_3d(scene_root)
 	if scene_camera == null:
-		return McpErrorCodes.make(
-			McpErrorCodes.INVALID_PARAMS,
+		return ErrorCodes.make(
+			ErrorCodes.NODE_NOT_FOUND,
 			"No current Camera3D in scene — mark a Camera3D as `current` or add one to the scene",
 		)
 
@@ -453,11 +526,95 @@ func _take_cinematic_screenshot(max_resolution: int) -> Dictionary:
 	sub_vp.queue_free()
 
 	if image == null or image.is_empty():
-		return McpErrorCodes.make(McpErrorCodes.INTERNAL_ERROR, "Cinematic render produced an empty image")
+		return _empty_image_error(
+			"cinematic",
+			"Cinematic render produced an empty image. The SubViewport returned no texture — typically headless mode (force_draw has no rendered output) or the scene's Camera3D is positioned so nothing visible is in frame."
+		)
 
 	var result := _finalize_image(image, "cinematic", max_resolution)
-	result.data["camera_path"] = ScenePath.from_node(scene_camera, scene_root)
+	result.data["camera_path"] = McpScenePath.from_node(scene_camera, scene_root)
 	return result
+
+
+## Reject a `source="viewport"` screenshot before we ever pull the
+## texture if the edited scene has no Node3D content. The 3D viewport
+## returns an empty (or stale) image in that case; surfacing it as
+## INTERNAL_ERROR ("Failed to capture image from viewport") gave LLM
+## callers no signal that the right move is to switch source or open a
+## 3D scene. 152 hits / 63 uuids in 24h across plugin versions 2.5.0 ->
+## 2.5.6 traced back to this. Returns `{}` on success.
+##
+## Caller passes `EditorInterface.get_edited_scene_root()`; the static
+## form lets tests exercise the branches with a synthetic scene root
+## without driving the editor.
+static func viewport_screenshot_precheck(scene_root: Node) -> Dictionary:
+	if scene_root == null:
+		return _make_viewport_not_3d_error(
+			"",
+			"The editor 3D viewport is empty because no scene is open. Open a scene with `scene_open` first."
+		)
+	## A scene with any Node3D content — root or descendant — has
+	## something the 3D viewport can render. Walking the tree (rather
+	## than only checking the root type) avoids a false reject on the
+	## common `Node` / `Node2D` root + Node3D descendant pattern.
+	if _scene_has_node3d_content(scene_root):
+		return {}
+	var root_type := scene_root.get_class()
+	var hint: String
+	if scene_root is Node2D or scene_root is Control:
+		hint = (
+			"The 3D viewport is empty because the current scene is 2D (%s root) with no Node3D descendants. "
+			+ "Options: (a) open a 3D scene, "
+			+ "(b) use source=\"cinematic\" if a Camera3D exists in the scene, "
+			+ "(c) call scene_get_hierarchy first to inspect what's available."
+		) % root_type
+	else:
+		hint = (
+			"The 3D viewport is empty because the current scene (%s root) has no Node3D content anywhere in the tree. "
+			+ "Options: (a) open or add a Node3D, "
+			+ "(b) use source=\"cinematic\" if a Camera3D exists in the scene, "
+			+ "(c) call scene_get_hierarchy first to inspect what's available."
+		) % root_type
+	return _make_viewport_not_3d_error(root_type, hint)
+
+
+## True if scene_root is itself a Node3D or owns any Node3D descendant.
+## DFS short-circuits on the first hit so empty 2D scenes stay cheap.
+static func _scene_has_node3d_content(scene_root: Node) -> bool:
+	if scene_root is Node3D:
+		return true
+	var stack: Array[Node] = [scene_root]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		for child in node.get_children():
+			if child is Node3D:
+				return true
+			stack.append(child)
+	return false
+
+
+static func _make_viewport_not_3d_error(scene_root_type: String, hint: String) -> Dictionary:
+	## `hint` becomes `error.message`; not duplicated into `data` because
+	## `GodotCommandError`'s string form already appends every `data` key
+	## as a suffix on the agent-visible error.
+	var err := ErrorCodes.make(ErrorCodes.EDITOR_NOT_READY, hint)
+	err["error"]["data"] = {
+		"editor_state": "viewport_not_3d",
+		"scene_root_type": scene_root_type,
+	}
+	return err
+
+
+## Reached only when the precheck passed but the texture still came
+## back empty — headless rendering, a freshly opened editor whose 3D
+## viewport hasn't drawn a frame, or a SubViewport that lost its target.
+static func _empty_image_error(source: String, hint: String) -> Dictionary:
+	var err := ErrorCodes.make(ErrorCodes.EDITOR_NOT_READY, hint)
+	err["error"]["data"] = {
+		"editor_state": "viewport_empty",
+		"source": source,
+	}
+	return err
 
 
 ## Return the Camera3D that would be active if the scene were running.
@@ -588,6 +745,10 @@ func clear_logs(_params: Dictionary) -> Dictionary:
 
 func reload_plugin(_params: Dictionary) -> Dictionary:
 	_log_buffer.log("reload_plugin requested, reloading next frame")
+	## Persist a pending plugin_reload telemetry event *before* the
+	## disable kills the live WebSocket. The re-enabled plugin's
+	## _enter_tree flushes via `_telemetry.flush_pending_plugin_reload()`.
+	Telemetry.record_pending_plugin_reload("mcp_tool")
 	_do_reload_plugin.call_deferred()
 	return {"data": {"status": "reloading", "message": "Plugin reload initiated"}}
 
@@ -615,3 +776,25 @@ func quit_editor(_params: Dictionary) -> Dictionary:
 	## Defer the quit so the response is sent back before the editor exits.
 	EditorInterface.get_base_control().get_tree().call_deferred("quit")
 	return {"data": {"status": "quitting", "message": "Editor quit initiated"}}
+
+
+func game_eval(params: Dictionary) -> Dictionary:
+	var code: String = params.get("code", "")
+	if code.is_empty():
+		return ErrorCodes.make(ErrorCodes.MISSING_REQUIRED_PARAM, "code is required")
+
+	if _debugger_plugin == null or _connection == null:
+		return ErrorCodes.make(ErrorCodes.INTERNAL_ERROR,
+			"Debugger bridge unavailable — plugin may not be fully initialised")
+
+	if not EditorInterface.is_playing_scene():
+		return ErrorCodes.make(ErrorCodes.EDITOR_NOT_READY,
+			"Game is not running — start the project first")
+
+	var request_id: String = params.get("_request_id", "")
+	if request_id.is_empty():
+		return ErrorCodes.make(ErrorCodes.INTERNAL_ERROR,
+			"Missing request_id — cannot correlate deferred response")
+
+	_debugger_plugin.request_game_eval(code, request_id, _connection)
+	return McpDispatcher.DEFERRED_RESPONSE

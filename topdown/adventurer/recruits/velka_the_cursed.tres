@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://adventurer/adventurer_data.gd" id="1"]
+[ext_resource type="Resource" path="res://adventurer/races/human.tres" id="2"]
+[ext_resource type="Resource" path="res://adventurer/classes/mage.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"velka_the_cursed"
+display_name = "Velka the Cursed"
+background = "Wears black even in summer. Speaks to the dead and, more troublingly, the dead answer. She finds you wherever cruelty has been done — and is delighted to be hired."
+portrait_color = Color(0.35, 0.2, 0.4, 1)
+race = ExtResource("2")
+current_class = ExtResource("3")
+level = 4
+max_health = 32
+max_mana = 44
+max_stamina = 40
+strength = 9
+dexterity = 11
+constitution = 10
+intelligence = 17
+wisdom = 14
+charisma = 8
+weapon_proficiencies = [&"staff", &"dagger"]
+skill_proficiencies = [&"necromancy", &"curse_magic"]
+rarity = 3
+recruit_strength_tier = 4
+karma_alignment = -1
+hire_cost = 500
+min_strength_rep = 0
+max_karma = -1
+guaranteed_spawn = true

@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://adventurer/adventurer_data.gd" id="1"]
+[ext_resource type="Resource" path="res://adventurer/races/orc.tres" id="2"]
+[ext_resource type="Resource" path="res://adventurer/classes/warrior.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"bren_the_bloodied"
+display_name = "Bren the Bloodied"
+background = "Cast out of his warband for refusing to finish an unarmed enemy. Drinks too much. Will swing twice when most would swing once."
+portrait_color = Color(0.45, 0.55, 0.35, 1)
+race = ExtResource("2")
+current_class = ExtResource("3")
+level = 2
+max_health = 52
+max_mana = 2
+max_stamina = 65
+strength = 16
+dexterity = 9
+constitution = 14
+intelligence = 6
+wisdom = 8
+charisma = 7
+weapon_proficiencies = [&"greatsword", &"axe"]
+rarity = 1
+recruit_strength_tier = 2
+karma_alignment = -1
+hire_cost = 140
+min_strength_rep = 0

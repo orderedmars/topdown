@@ -1,0 +1,89 @@
+[gd_scene format=3 uid="uid://cbbrrn4an7kea"]
+
+[ext_resource type="PackedScene" path="res://player/player.tscn" id="1_player"]
+[ext_resource type="Script" path="res://hud.gd" id="2_hud"]
+[ext_resource type="Theme" path="res://themes/health_theme.tres" id="3_health"]
+[ext_resource type="Theme" path="res://themes/mana_theme.tres" id="4_mana"]
+[ext_resource type="Theme" path="res://themes/stamina_theme.tres" id="5_stamina"]
+[ext_resource type="Script" path="res://dungeon/dungeon_floor.gd" id="7_floor"]
+
+[node name="Dungeon" type="Node2D"]
+script = ExtResource("7_floor")
+
+[node name="Background" type="ColorRect" parent="."]
+z_index = -10
+offset_left = -4000.0
+offset_top = -4000.0
+offset_right = 4000.0
+offset_bottom = 4000.0
+color = Color(0.05, 0.05, 0.07, 1)
+
+[node name="WallBody" type="StaticBody2D" parent="."]
+
+[node name="Markers" type="Node2D" parent="."]
+z_index = 5
+
+[node name="Player" parent="." groups=["player"] instance=ExtResource("1_player")]
+z_index = 10
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("2_hud")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HUD"]
+
+[node name="HealthBar" type="ProgressBar" parent="HUD/VBoxContainer"]
+custom_minimum_size = Vector2(200, 20)
+layout_mode = 2
+theme = ExtResource("3_health")
+value = 100.0
+
+[node name="ManaBar" type="ProgressBar" parent="HUD/VBoxContainer"]
+custom_minimum_size = Vector2(200, 20)
+layout_mode = 2
+theme = ExtResource("4_mana")
+value = 100.0
+
+[node name="StaminaBar" type="ProgressBar" parent="HUD/VBoxContainer"]
+custom_minimum_size = Vector2(200, 20)
+layout_mode = 2
+theme = ExtResource("5_stamina")
+value = 100.0
+
+[node name="HealButton" type="Button" parent="HUD/VBoxContainer"]
+layout_mode = 2
+text = "Full Heal (Testing)"
+
+[node name="FireballButton" type="Button" parent="HUD/VBoxContainer"]
+layout_mode = 2
+text = "Fireball (15 Mana)"
+
+[node name="ArrowButton" type="Button" parent="HUD/VBoxContainer"]
+layout_mode = 2
+text = "Shoot Arrow (5 Stamina)"
+
+[node name="PartyContainer" type="VBoxContainer" parent="HUD"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -220.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 400.0
+grow_horizontal = 0
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="HUD/PartyContainer"]
+layout_mode = 2
+text = "PARTY MEMBERS"
+horizontal_alignment = 2
+
+[node name="MemberList" type="VBoxContainer" parent="HUD/PartyContainer"]
+layout_mode = 2
+
+[node name="Crosshair" type="ColorRect" parent="HUD"]
+visible = false
+offset_left = -5.0
+offset_top = -5.0
+offset_right = 5.0
+offset_bottom = 5.0
+color = Color(1, 1, 1, 0.53333336)

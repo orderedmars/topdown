@@ -3,7 +3,8 @@ class_name McpJsonStrategy
 extends RefCounted
 
 ## Read–merge–write strategy for JSON-backed MCP clients.
-## All knobs come from the McpClient descriptor — no per-client branches in here.
+## All knobs come from the McpClient descriptor as plain data — no Callables.
+## See `_base.gd` for why descriptors are data-only.
 
 
 static func configure(client: McpClient, server_name: String, server_url: String) -> Dictionary:
@@ -14,11 +15,14 @@ static func configure(client: McpClient, server_name: String, server_url: String
 	var read := _read_or_init(path)
 	if not read["ok"]:
 		return {"status": "error", "message": "Refusing to overwrite %s: %s. Fix or move the file, then re-run Configure." % [path, read["error"]]}
-	if not client.entry_builder.is_valid():
-		return McpClient.stale_callable_status(client)
 	var config: Dictionary = read["data"]
 	var holder := _ensure_path(config, client.server_key_path)
-	holder[server_name] = client.entry_builder.call(server_name, server_url)
+	## Pass the existing entry through so `build_entry` can preserve user-mutable
+	## state (auto-approval lists, `disabled` toggles) instead of resetting it
+	## to descriptor defaults on every Configure click. See `entry_initial_fields`
+	## docs in `_base.gd`.
+	var existing: Variant = holder.get(server_name, null)
+	holder[server_name] = build_entry(client, server_url, existing)
 
 	if not McpAtomicWrite.write(path, JSON.stringify(config, "\t")):
 		return {"status": "error", "message": "Cannot write to %s" % path}
@@ -42,9 +46,7 @@ static func check_status(client: McpClient, server_name: String, server_url: Str
 	## An entry under `server_name` exists — if the URL doesn't match,
 	## that's drift (the user changed the port and the client config is stale),
 	## not "never configured". The dock surfaces that as an amber banner.
-	if client.verify_entry.is_valid():
-		return McpClient.Status.CONFIGURED if client.verify_entry.call(entry, server_url) else McpClient.Status.CONFIGURED_MISMATCH
-	return McpClient.Status.CONFIGURED if entry.get(client.entry_url_field, "") == server_url else McpClient.Status.CONFIGURED_MISMATCH
+	return McpClient.Status.CONFIGURED if verify_entry(client, entry, server_url) else McpClient.Status.CONFIGURED_MISMATCH
 
 
 static func remove(client: McpClient, server_name: String) -> Dictionary:
@@ -61,6 +63,126 @@ static func remove(client: McpClient, server_name: String) -> Dictionary:
 		if not McpAtomicWrite.write(path, JSON.stringify(config, "\t")):
 			return {"status": "error", "message": "Cannot write to %s" % path}
 	return {"status": "ok", "message": "%s configuration removed" % client.display_name}
+
+
+## Synthesize the entry dict the strategy will write under
+## `server_key_path[server_name]`. For non-bridge clients this is the
+## existing entry (if any) with `entry_url_field` + every
+## `entry_extra_fields` key force-set (the verified type pins) and every
+## `entry_initial_fields` key set ONLY when absent (preserves user state
+## like `alwaysAllow`/`autoApprove` arrays). For bridge clients (Claude
+## Desktop) it composes the uvx + mcp-proxy command shape unconditionally
+## — the bridge form has no user-mutable surface.
+static func build_entry(client: McpClient, server_url: String, existing: Variant = null) -> Dictionary:
+	match client.entry_uvx_bridge:
+		McpClient.UvxBridge.FLAT:
+			return {
+				"command": McpClient.resolve_uvx_path(),
+				"args": McpClient.mcp_proxy_bridge_args(server_url),
+				"env": _merge_bridge_env(existing),
+			}
+	var entry: Dictionary = (existing as Dictionary).duplicate() if existing is Dictionary else {}
+	entry[client.entry_url_field] = server_url
+	for k in client.entry_extra_fields:
+		entry[k] = client.entry_extra_fields[k]
+	for k in client.entry_initial_fields:
+		if not entry.has(k):
+			entry[k] = client.entry_initial_fields[k]
+	return entry
+
+
+## Default verifier for a stored entry. For bridge clients, recognise the
+## bridge form (and, for `flat`, the future url-style form too — keeps the
+## tolerance Claude Desktop has had since the npx-bridge migration).
+##
+## For non-bridge clients: assert `entry[entry_url_field] == url` AND every
+## key in `entry_extra_fields` matches verbatim. Type-pinning for Cline /
+## Roo / Kilo (`type: "streamable-http"` etc.) falls out of this — pre-fix
+## entries that lack the type field fail verification and surface as drift.
+static func verify_entry(client: McpClient, entry: Dictionary, server_url: String) -> bool:
+	match client.entry_uvx_bridge:
+		McpClient.UvxBridge.FLAT:
+			# Future url-style entry: accept if Claude Desktop ever speaks HTTP natively.
+			if entry.get(client.entry_url_field, "") == server_url:
+				return true
+			var cmd = entry.get("command", "")
+			if not (cmd is String and _command_is_uvx_like(cmd as String)):
+				return false
+			if not _bridge_args_are_valid(entry.get("args", []), server_url):
+				return false
+			return _bridge_env_matches(entry)
+	if entry.get(client.entry_url_field, "") != server_url:
+		return false
+	for k in client.entry_extra_fields:
+		if entry.get(k) != client.entry_extra_fields[k]:
+			return false
+	return true
+
+
+## Pre-fix entries lack `env.UV_LINK_MODE=copy` and hit the Windows uvx
+## hard-link race documented in `utils/uv_cache_cleanup.gd`. Flag them as
+## drift so the dock surfaces an amber banner and a Configure-click
+## rewrites the entry with the env pin. Every key in `bridge_env_for_uvx()`
+## must match verbatim — extra user keys are tolerated so a hand-added
+## `PYTHONUNBUFFERED=1` etc. doesn't trigger drift forever.
+static func _bridge_env_matches(entry: Dictionary) -> bool:
+	var env = entry.get("env", null)
+	if not (env is Dictionary):
+		return false
+	var pin := McpClient.bridge_env_for_uvx()
+	for k in pin:
+		if env.get(k) != pin[k]:
+			return false
+	return true
+
+
+## Configure rewrites the bridge entry wholesale (the bridge form is
+## identity-defined by command+args+env), but the verifier tolerates extra
+## user-added env keys like `HTTP_PROXY` / `PYTHONUNBUFFERED`. Without
+## merging, a Configure click on a CONFIGURED_MISMATCH entry would silently
+## drop those keys — so layer the UV_LINK_MODE pin over whatever env block
+## already exists on disk. New entries with no prior env get just the pin.
+static func _merge_bridge_env(existing: Variant) -> Dictionary:
+	var pin := McpClient.bridge_env_for_uvx()
+	if not (existing is Dictionary):
+		return pin
+	var existing_env = (existing as Dictionary).get("env", null)
+	if not (existing_env is Dictionary):
+		return pin
+	var merged: Dictionary = (existing_env as Dictionary).duplicate()
+	for k in pin:
+		merged[k] = pin[k]
+	return merged
+
+
+## Basename match for `uvx` / `uvx.exe`, accepting both the bare-name
+## fallback and an absolute path resolved by `McpCliFinder`. Used by the
+## FLAT bridge verifier — the only place we ever inspect a stored bridge
+## command/path.
+static func _command_is_uvx_like(cmd: String) -> bool:
+	var basename := cmd.get_file()
+	return basename == "uvx" or basename == "uvx.exe"
+
+
+## Strict bridge-argv check: the args array must include the pinned
+## `mcp-proxy` package spec, the `--transport streamablehttp` selector, and
+## the expected URL. Pre-fix `args.has(url)` was lenient — entries with the
+## wrong transport (`--transport sse`) or a different package would still
+## verify CONFIGURED, hiding the broken bridge. Match `mcp-proxy` by prefix
+## so a future MCP_PROXY_VERSION bump doesn't churn the verifier.
+static func _bridge_args_are_valid(args: Variant, server_url: String) -> bool:
+	if not (args is Array):
+		return false
+	var has_mcp_proxy := false
+	for a in args:
+		if a is String and (a as String).begins_with("mcp-proxy"):
+			has_mcp_proxy = true
+			break
+	if not has_mcp_proxy:
+		return false
+	if not (args.has("--transport") and args.has("streamablehttp") and args.has(server_url)):
+		return false
+	return true
 
 
 ## Returns {"ok": true, "data": Dictionary} when the file is absent or parses

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="FloorData" load_steps=3 format=3 uid="uid://cflr1data0001"]
+
+[ext_resource type="Script" uid="uid://dmg4qut0ytrug" path="res://dungeon/floor_data.gd" id="1_fd"]
+[ext_resource type="PackedScene" uid="uid://cd6ctyh0axuhy" path="res://enemy/enemy.tscn" id="2_e0"]
+
+[resource]
+script = ExtResource("1_fd")
+floor_number = 1
+theme_name = "Floor 1"
+enemy_pool = Array[PackedScene]([ExtResource("2_e0")])

@@ -1,0 +1,45 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8m3y5q1x2j6u"]
+
+[ext_resource type="Script" path="res://ui/dialogue_ui.gd" id="1_diag"]
+
+[node name="DialogueUI" type="CanvasLayer"]
+script = ExtResource("1_diag")
+
+[node name="Panel" type="Panel" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -300.0
+offset_top = -220.0
+offset_right = 300.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="NameLabel" type="Label" parent="Panel"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 200.0
+offset_bottom = 33.0
+theme_override_colors/font_color = Color(1, 0.8, 0, 1)
+text = "NPC NAME"
+
+[node name="MessageLabel" type="Label" parent="Panel"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 40.0
+offset_right = 580.0
+offset_bottom = 100.0
+text = "This is a sample message for the dialogue box."
+autowrap_mode = 2
+
+[node name="ChoiceContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 110.0
+offset_right = 580.0
+offset_bottom = 190.0
+theme_override_constants/separation = 5

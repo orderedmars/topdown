@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RaceData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://adventurer/race_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+race_name = "Orc"
+description = "Brutal warriors with thick hide and explosive strength. Slow of mind, quick to anger."
+color = Color(0.5, 0.6, 0.4, 1)
+modifier_strength = 3
+modifier_dexterity = 0
+modifier_constitution = 2
+modifier_intelligence = -2
+modifier_wisdom = -1
+modifier_charisma = -1
+race_skills = []

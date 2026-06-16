@@ -17,6 +17,16 @@ extends Logger
 ## and the host (game_helper.gd) flushes once per frame from the main
 ## thread, where EngineDebugger.send_message is safe to call.
 
+## `McpLogBacktrace` is published as a `class_name` on log_backtrace.gd, but a
+## freshly-launched game subprocess (no prior editor scan; e.g. CI launching
+## `--headless --path`) hits this autoload before the global class_name table
+## is populated, and parsing this script fails with
+## "Identifier 'McpLogBacktrace' not declared in the current scope". Using
+## `const preload` resolves the path at parse time and is independent of the
+## class_name registry — matches the project convention in CLAUDE.md
+## ("Internals … skip class_name entirely and load via const preload").
+const _LogBacktrace := preload("res://addons/godot_ai/utils/log_backtrace.gd")
+
 var _pending: Array = []
 var _mutex := Mutex.new()
 
@@ -37,34 +47,18 @@ func _log_error(
 	error_type: int,
 	script_backtraces: Array,
 ) -> void:
-	## error_type: 0 = ERROR (push_error), 1 = WARNING (push_warning),
-	## 2 = SCRIPT, 3 = SHADER. Map warnings to "warn" so callers can filter
-	## without consulting the enum.
-	##
-	## Single-arg push_error("msg") / push_warning("msg") stores the user's
-	## string in `code` and leaves `rationale` empty; the two-arg form
-	## push_error(code, rationale) populates both. Fall back to `code` when
-	## `rationale` is missing — otherwise the user's message is silently lost.
-	##
-	## `file`/`line` for push_error/push_warning point into Godot's own C++
-	## source (core/variant/variant_utility.cpp). Prefer the first frame of
-	## `script_backtraces` so the capture shows the caller's GDScript location.
-	var level := "warn" if error_type == 1 else "error"
-	var message := rationale if not rationale.is_empty() else code
-	var src_file := file
-	var src_line := line
-	var src_function := function
-	for bt in script_backtraces:
-		if bt != null and bt.get_frame_count() > 0:
-			src_file = bt.get_frame_file(0)
-			src_line = bt.get_frame_line(0)
-			src_function = bt.get_frame_function(0)
-			break
+	## EngineDebugger's payload shape is `[level, text]` — the source
+	## location has nowhere structured to land for the game side, so we
+	## inline it into `text`. editor_logger keeps the resolved fields
+	## as structured columns instead.
+	var resolved := _LogBacktrace.resolve_error(
+		function, file, line, code, rationale, error_type, script_backtraces,
+	)
 	var loc := ""
-	if not src_file.is_empty():
-		loc = "%s:%d @ %s" % [src_file, src_line, src_function] if not src_function.is_empty() else "%s:%d" % [src_file, src_line]
-	var text := "%s (%s)" % [message, loc] if not loc.is_empty() else message
-	_append(level, text)
+	if not resolved.path.is_empty():
+		loc = "%s:%d @ %s" % [resolved.path, resolved.line, resolved.function] if not resolved.function.is_empty() else "%s:%d" % [resolved.path, resolved.line]
+	var text: String = "%s (%s)" % [resolved.message, loc] if not loc.is_empty() else resolved.message
+	_append(resolved.level, text)
 
 
 func _append(level: String, text: String) -> void:

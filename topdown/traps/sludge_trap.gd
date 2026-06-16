@@ -15,9 +15,7 @@ func _process(delta: float) -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):
 		body.apply_slow(slow_amount)
-		print("Entered Sludge Trap!")
 
 func _on_body_exited(body: Node2D) -> void:
 	if body.is_in_group("player"):
 		body.clear_slow()
-		print("Exited Sludge Trap!")

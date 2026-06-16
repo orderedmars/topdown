@@ -1,0 +1,143 @@
+[gd_scene format=3 uid="uid://ctowndevhuba1"]
+
+[ext_resource type="PackedScene" uid="uid://djb57fxjpl4r3" path="res://player/player.tscn" id="1_player"]
+[ext_resource type="Script" uid="uid://bggr1a8mjbnkv" path="res://hud.gd" id="2_hud"]
+[ext_resource type="Theme" uid="uid://bs5i2pvf7gods" path="res://themes/health_theme.tres" id="3_health"]
+[ext_resource type="Theme" uid="uid://bxwv1fogo8unh" path="res://themes/mana_theme.tres" id="4_mana"]
+[ext_resource type="Theme" uid="uid://c70es1056etuv" path="res://themes/stamina_theme.tres" id="5_stamina"]
+[ext_resource type="PackedScene" uid="uid://cbuildscafa01" path="res://world/building.tscn" id="6_building"]
+
+[node name="Town" type="Node2D"]
+
+[node name="Background" type="ColorRect" parent="."]
+z_index = -10
+offset_left = -1200.0
+offset_top = -700.0
+offset_right = 1200.0
+offset_bottom = 700.0
+color = Color(0.15, 0.13, 0.1, 1)
+
+[node name="Player" parent="." groups=["player"] instance=ExtResource("1_player")]
+z_index = 10
+
+[node name="ThievesGuild" parent="." instance=ExtResource("6_building")]
+position = Vector2(-800, -300)
+building_name = "Thieves Guild"
+building_color = Color(0.3, 0.1, 0.1, 1)
+
+[node name="WizardTower" parent="." instance=ExtResource("6_building")]
+position = Vector2(-400, -300)
+building_name = "Wizard Tower"
+building_color = Color(0.3, 0.15, 0.5, 1)
+
+[node name="AdventurersGuild" parent="." instance=ExtResource("6_building")]
+position = Vector2(0, -300)
+building_name = "Adventurers Guild"
+building_color = Color(0.5, 0.35, 0.2, 1)
+interior_scene_path = "res://scenes/adventurers_guild.tscn"
+
+[node name="AssassinsGuild" parent="." instance=ExtResource("6_building")]
+position = Vector2(400, -300)
+building_name = "Assassins Guild"
+building_color = Color(0.1, 0.1, 0.15, 1)
+
+[node name="MerchantsGuild" parent="." instance=ExtResource("6_building")]
+position = Vector2(800, -300)
+building_name = "Merchants Guild"
+building_color = Color(0.7, 0.55, 0.2, 1)
+
+[node name="ShamanHut" parent="." instance=ExtResource("6_building")]
+position = Vector2(-800, 300)
+building_name = "Shaman Hut"
+building_color = Color(0.2, 0.4, 0.2, 1)
+
+[node name="Blacksmith" parent="." instance=ExtResource("6_building")]
+position = Vector2(-400, 300)
+building_name = "Blacksmith"
+building_color = Color(0.35, 0.35, 0.4, 1)
+
+[node name="MapPedestal" parent="." instance=ExtResource("6_building")]
+position = Vector2(0, 300)
+building_name = "Map Pedestal"
+building_color = Color(0.5, 0.5, 0.55, 1)
+building_size = Vector2(80, 80)
+has_door = false
+interaction_radius = 80.0
+
+[node name="Church" parent="." instance=ExtResource("6_building")]
+position = Vector2(400, 300)
+building_name = "Church"
+building_color = Color(0.85, 0.85, 0.9, 1)
+
+[node name="BlackMarket" parent="." instance=ExtResource("6_building")]
+position = Vector2(800, 300)
+building_name = "Black Market"
+building_color = Color(0.2, 0.1, 0.25, 1)
+
+[node name="DungeonGate" parent="." instance=ExtResource("6_building")]
+position = Vector2(0, 600)
+building_name = "Dungeon Gate"
+building_color = Color(0.1, 0.05, 0.15, 1)
+interior_scene_path = "res://scenes/dungeon.tscn"
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("2_hud")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HUD"]
+
+[node name="HealthBar" type="ProgressBar" parent="HUD/VBoxContainer"]
+custom_minimum_size = Vector2(200, 20)
+layout_mode = 2
+theme = ExtResource("3_health")
+value = 100.0
+
+[node name="ManaBar" type="ProgressBar" parent="HUD/VBoxContainer"]
+custom_minimum_size = Vector2(200, 20)
+layout_mode = 2
+theme = ExtResource("4_mana")
+value = 100.0
+
+[node name="StaminaBar" type="ProgressBar" parent="HUD/VBoxContainer"]
+custom_minimum_size = Vector2(200, 20)
+layout_mode = 2
+theme = ExtResource("5_stamina")
+value = 100.0
+
+[node name="HealButton" type="Button" parent="HUD/VBoxContainer"]
+layout_mode = 2
+text = "Full Heal (Testing)"
+
+[node name="FireballButton" type="Button" parent="HUD/VBoxContainer"]
+layout_mode = 2
+text = "Fireball (15 Mana)"
+
+[node name="ArrowButton" type="Button" parent="HUD/VBoxContainer"]
+layout_mode = 2
+text = "Shoot Arrow (5 Stamina)"
+
+[node name="PartyContainer" type="VBoxContainer" parent="HUD"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -220.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 400.0
+grow_horizontal = 0
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="HUD/PartyContainer"]
+layout_mode = 2
+text = "PARTY MEMBERS"
+horizontal_alignment = 2
+
+[node name="MemberList" type="VBoxContainer" parent="HUD/PartyContainer"]
+layout_mode = 2
+
+[node name="Crosshair" type="ColorRect" parent="HUD"]
+visible = false
+offset_left = -5.0
+offset_top = -5.0
+offset_right = 5.0
+offset_bottom = 5.0
+color = Color(1, 1, 1, 0.53333336)

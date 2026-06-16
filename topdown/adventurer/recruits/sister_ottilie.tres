@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://adventurer/adventurer_data.gd" id="1"]
+[ext_resource type="Resource" path="res://adventurer/races/human.tres" id="2"]
+[ext_resource type="Resource" path="res://adventurer/classes/mage.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+id = &"sister_ottilie"
+display_name = "Sister Ottilie"
+background = "Lay sister of the white chapel. Holds her holy symbol like a hammer and her hammer like a holy symbol. Will not march beside the wicked."
+portrait_color = Color(0.95, 0.92, 0.85, 1)
+race = ExtResource("2")
+current_class = ExtResource("3")
+level = 3
+max_health = 36
+max_mana = 28
+max_stamina = 45
+strength = 12
+dexterity = 10
+constitution = 13
+intelligence = 12
+wisdom = 16
+charisma = 13
+weapon_proficiencies = [&"mace"]
+skill_proficiencies = [&"holy_magic", &"healing"]
+rarity = 2
+recruit_strength_tier = 3
+karma_alignment = 1
+hire_cost = 320
+min_strength_rep = 2
+min_karma = 1

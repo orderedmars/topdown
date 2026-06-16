@@ -1,0 +1,88 @@
+[gd_scene format=3 uid="uid://inventory_ui"]
+
+[ext_resource type="Script" path="res://ui/inventory_ui.gd" id="1_invui"]
+
+[node name="InventoryUI" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1_invui")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.75)
+mouse_filter = 0
+
+[node name="Panel" type="Panel" parent="Backdrop"]
+anchor_left = 0.05
+anchor_top = 0.05
+anchor_right = 0.95
+anchor_bottom = 0.95
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Backdrop/Panel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="Backdrop/Panel/Margin"]
+layout_mode = 2
+
+[node name="TitleBar" type="HBoxContainer" parent="Backdrop/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Backdrop/Panel/Margin/VBox/TitleBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "INVENTORY"
+theme_override_font_sizes/font_size = 18
+
+[node name="CloseBtn" type="Button" parent="Backdrop/Panel/Margin/VBox/TitleBar"]
+layout_mode = 2
+text = "Close  [I]"
+
+[node name="Divider" type="HSeparator" parent="Backdrop/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="ContentSplit" type="HSplitContainer" parent="Backdrop/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 20
+
+[node name="LeftPane" type="VBoxContainer" parent="Backdrop/Panel/Margin/VBox/ContentSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ItemsHeader" type="Label" parent="Backdrop/Panel/Margin/VBox/ContentSplit/LeftPane"]
+layout_mode = 2
+text = "ITEMS"
+theme_override_font_sizes/font_size = 13
+
+[node name="ItemScroll" type="ScrollContainer" parent="Backdrop/Panel/Margin/VBox/ContentSplit/LeftPane"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ItemList" type="VBoxContainer" parent="Backdrop/Panel/Margin/VBox/ContentSplit/LeftPane/ItemScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RightPane" type="VBoxContainer" parent="Backdrop/Panel/Margin/VBox/ContentSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CharTabs" type="HBoxContainer" parent="Backdrop/Panel/Margin/VBox/ContentSplit/RightPane"]
+layout_mode = 2
+
+[node name="EquipHeader" type="Label" parent="Backdrop/Panel/Margin/VBox/ContentSplit/RightPane"]
+layout_mode = 2
+text = "EQUIPMENT"
+theme_override_font_sizes/font_size = 13
+
+[node name="SlotList" type="VBoxContainer" parent="Backdrop/Panel/Margin/VBox/ContentSplit/RightPane"]
+layout_mode = 2

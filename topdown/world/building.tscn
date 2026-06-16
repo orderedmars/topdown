@@ -1,0 +1,56 @@
+[gd_scene format=3 uid="uid://cbuildscafa01"]
+
+[ext_resource type="Script" path="res://world/building.gd" id="1_building"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(200, 150)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_interact"]
+radius = 130.0
+
+[node name="Building" type="StaticBody2D"]
+script = ExtResource("1_building")
+
+[node name="Sprite" type="ColorRect" parent="."]
+offset_left = -100.0
+offset_top = -75.0
+offset_right = 100.0
+offset_bottom = 75.0
+color = Color(0.5, 0.35, 0.2, 1)
+
+[node name="Door" type="ColorRect" parent="."]
+offset_left = -20.0
+offset_top = 55.0
+offset_right = 20.0
+offset_bottom = 75.0
+color = Color(0.4, 0.25, 0.1, 1)
+
+[node name="Label" type="Label" parent="."]
+offset_left = -100.0
+offset_top = -105.0
+offset_right = 100.0
+offset_bottom = -80.0
+text = "Building"
+horizontal_alignment = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_body")
+
+[node name="InteractionZone" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionZone"]
+shape = SubResource("CircleShape2D_interact")
+
+[node name="InteractionLabel" type="Label" parent="."]
+z_index = 20
+offset_left = -100.0
+offset_top = 80.0
+offset_right = 100.0
+offset_bottom = 105.0
+text = "Press E to enter"
+horizontal_alignment = 1
+
+[connection signal="body_entered" from="InteractionZone" to="." method="_on_interaction_zone_body_entered"]
+[connection signal="body_exited" from="InteractionZone" to="." method="_on_interaction_zone_body_exited"]

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ClassData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://adventurer/class_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+class_title = "Mage"
+description = "Arcane spellcaster. Devastating magic at the cost of fragile flesh."
+color = Color(0.3, 0.4, 0.8, 1)
+starter_items = []
+starter_skills = []
+skill_pool = []
+evolution_level = 10
+evolutions = []

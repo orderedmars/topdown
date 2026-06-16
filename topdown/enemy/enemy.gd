@@ -1,131 +1,274 @@
 extends CharacterBody2D
 
-@export var speed: float = 120.0
+enum State { IDLE, SUSPICIOUS, CHASING, SEARCHING }
+var current_state: State = State.IDLE
+
+@export var speed: float = 140.0
+@export var suspicion_time: float = 3.5   # seconds of continuous hearing before full chase
+@export var chase_timeout: float = 5.0    # seconds to rush last known pos after losing detection
+@export var search_wait_time: float = 3.0 # seconds to scan at last known pos before giving up
+@export var loot_table: LootTable = null  # assign in Inspector or leave null for no drops
+
+@export_group("Combat")
+@export var display_name: String = "Enemy"
 @export var max_health: float = 50.0
-@export var chase_timeout: float = 3.0
+@export var attack_damage: float = 6.0    # base hit landed in the battle scene
+@export var combat_initiative: int = 8    # rolled against player Dex for turn order
+
+# Status effects carried into the battle scene. Each entry is a Dictionary with
+# at least { "type": StringName, "turns": int }. Skills that apply effects (e.g.
+# poison-tipped arrows) push to this array before triggering BattleManager.
+var effects: Array[Dictionary] = []
+
+# Vision and hearing geometry is set via the CollisionShapes in the Inspector:
+#   VisionCone/CollisionShape2D  → ConvexPolygonShape2D  (forward triangle)
+#   DetectionZone/CollisionShape2D → CircleShape2D       (hearing radius)
+# The player's DetectionZone radius (layer 4) grows when sprinting, shrinks when crouching.
+# Overlap between the player's noise radius and these zones triggers detection.
 
 var health: float
 var target: Node2D = null
-var is_chasing: bool = false
-var slow_multiplier: float = 1.0
-var stun_timer: float = 0.0
-var is_stunned: bool = false
-
-var search_timer: float = 0.0
+var last_known_position: Vector2
+var state_timer: float = 0.0
+var suspicion_timer: float = 0.0
 var is_highlighted: bool = false
 
-@onready var health_bar: ProgressBar = $HealthBarContainer/ProgressBar
-@onready var raycast: RayCast2D = $RayCast2D
-@onready var hearing_visual: Polygon2D = $DetectionZone/HearingVisual
+const SCAN_SPEED: float = 0.5 # radians/sec — how fast the enemy sweeps its vision cone when idle
+
 @onready var vision_visual: Polygon2D = $VisionCone/VisionVisual
+@onready var hearing_visual: Polygon2D = $DetectionZone/HearingVisual
+@onready var vision_cone: Area2D = $VisionCone
+@onready var hearing_zone: Area2D = $DetectionZone
 @onready var outline: ReferenceRect = $Outline
+@onready var health_bar: ProgressBar = $HealthBarContainer/ProgressBar
+@onready var alert_label: Label = $AlertLabel
+@onready var nav_agent: NavigationAgent2D = $NavigationAgent2D
 
 func _ready() -> void:
+	add_to_group("enemy")
+	collision_layer = 2
+	collision_mask = 1
 	health = max_health
 	health_bar.max_value = max_health
 	health_bar.value = health
-	add_to_group("enemy")
+	alert_label.hide()
+	last_known_position = global_position
+	vision_visual.color = Color(1, 1, 0, 0.12)
 	hearing_visual.color = Color(1, 0, 0, 0.05)
-	vision_visual.color = Color(1, 0.5, 0, 0.08)
-	
-	# Projectiles should only hit these layers
-	collision_layer = 2 # Entities
-	collision_mask = 1 # World
+	if has_node("MeleeRange"):
+		($MeleeRange as Area2D).body_entered.connect(_on_melee_range_entered)
 
 func _physics_process(delta: float) -> void:
-	update_visuals()
 	outline.visible = is_highlighted
-	
-	if is_stunned:
-		stun_timer -= delta
-		if stun_timer <= 0: is_stunned = false
-		return
 
-	var currently_detects = check_for_player_radius()
+	match current_state:
+		State.IDLE:
+			alert_label.hide()
+			velocity = Vector2.ZERO
+			# Sweep the vision cone left and right so it has a purpose when idle.
+			# sin() makes it oscillate naturally without a hard reversal.
+			state_timer += delta
+			vision_cone.rotation += SCAN_SPEED * sin(state_timer * 1.2) * delta
 
-	if is_chasing:
-		if currently_detects:
-			search_timer = chase_timeout
-			move_towards_player()
-		else:
-			search_timer -= delta
-			if search_timer <= 0:
-				is_chasing = false
-				target = null
+			if check_vision():
+				start_chase()
+			elif check_hearing():
+				start_suspicion()
+
+		State.SUSPICIOUS:
+			alert_label.show()
+			alert_label.text = "?"
+			alert_label.modulate = Color.YELLOW
+			velocity = Vector2.ZERO
+			# Turn toward the source of the sound while building suspicion.
+			if target:
+				var angle_to = (target.global_position - global_position).angle()
+				vision_cone.rotation = lerp_angle(vision_cone.rotation, angle_to, 3.0 * delta)
+
+			if check_vision():
+				# Saw them — no need to wait, chase immediately.
+				start_chase()
+			elif check_hearing():
+				suspicion_timer += delta
+				if suspicion_timer >= suspicion_time:
+					start_chase()
 			else:
-				move_towards_player()
+				# Lost the sound — cool down slowly.
+				suspicion_timer -= delta * 0.5
+				if suspicion_timer <= 0.0:
+					current_state = State.IDLE
 
-func move_towards_player():
-	if not target: return
-	var diff = target.global_position - global_position
-	var direction = Vector2.ZERO
-	if abs(diff.x) > abs(diff.y): direction.x = sign(diff.x)
-	else: direction.y = sign(diff.y)
-	velocity = direction * speed * slow_multiplier
-	if direction.x > 0: rotation = 0
-	elif direction.x < 0: rotation = PI
-	elif direction.y > 0: rotation = PI/2
-	elif direction.y < 0: rotation = -PI/2
+		State.CHASING:
+			alert_label.show()
+			alert_label.text = "!"
+			alert_label.modulate = Color.RED
+
+			if check_vision() or check_hearing():
+				# Player still detected — update memory and pursue.
+				last_known_position = target.global_position
+				state_timer = chase_timeout
+				_steer_along_nav(target.global_position, speed, 10.0, delta)
+			else:
+				# Lost detection — rush to last known position.
+				state_timer -= delta
+				if state_timer <= 0.0:
+					start_searching()
+					velocity = Vector2.ZERO
+				else:
+					_steer_along_nav(last_known_position, speed * 0.8, 5.0, delta)
+
+		State.SEARCHING:
+			# Enemy arrived at last known position and is scanning for the player.
+			alert_label.show()
+			alert_label.text = "?"
+			alert_label.modulate = Color.ORANGE
+
+			if check_vision() or check_hearing():
+				start_chase()
+				return
+
+			var dist = global_position.distance_to(last_known_position)
+			if dist > 15.0:
+				# Still travelling to last known position.
+				_steer_along_nav(last_known_position, speed * 0.6, 3.0, delta)
+			else:
+				# Arrived — sweep and wait before giving up.
+				velocity = Vector2.ZERO
+				state_timer -= delta
+				vision_cone.rotation += SCAN_SPEED * 1.5 * sin(state_timer * 2.0) * delta
+				if state_timer <= 0.0:
+					current_state = State.IDLE
+
 	move_and_slide()
+	update_visual_polygons()
 
-func update_visuals():
-	hearing_visual.polygon = get_visible_polygon(150.0, 0, 2 * PI)
-	vision_visual.polygon = get_visible_polygon(250.0, -deg_to_rad(30), deg_to_rad(30))
+# --- Steering ---
 
-func get_visible_polygon(radius: float, start_angle: float, end_angle: float) -> PackedVector2Array:
-	var points = PackedVector2Array([Vector2.ZERO])
-	var ray_count = 24
-	var space_state = get_world_2d().direct_space_state
-	for i in range(ray_count + 1):
-		var angle = lerp(start_angle, end_angle, float(i) / ray_count)
-		var global_ray_dir = Vector2(cos(angle), sin(angle)).rotated(global_rotation)
-		var query = PhysicsRayQueryParameters2D.create(global_position, global_position + global_ray_dir * radius)
-		query.exclude = [self.get_rid()]
-		query.collision_mask = 1 # Only hit world
-		var result = space_state.intersect_ray(query)
-		points.append(to_local(result.position) if result else Vector2(cos(angle), sin(angle)) * radius)
-	return points
+# Drive velocity toward the next waypoint on the navigation agent's path.
+# Routing through the agent (rather than a straight line to the target) is what
+# keeps enemies from pressing into corridor walls when the player isn't aligned
+# with the corridor axis.
+func _steer_along_nav(target_pos: Vector2, move_speed: float, rot_lerp: float, delta: float) -> void:
+	nav_agent.target_position = target_pos
+	if nav_agent.is_navigation_finished():
+		velocity = Vector2.ZERO
+		return
+	var next_pos := nav_agent.get_next_path_position()
+	var dir := (next_pos - global_position).normalized()
+	velocity = dir * move_speed
+	# Only rotate the vision cone (the enemy's "look direction"). The body stays
+	# upright so pixel-art sprites don't tilt — they'll read vision_cone.rotation
+	# to pick a facing frame.
+	vision_cone.rotation = lerp_angle(vision_cone.rotation, dir.angle(), rot_lerp * delta)
 
-func check_for_player_radius() -> bool:
-	var player_node = get_tree().get_first_node_in_group("player")
-	if not player_node: return false
-	var detected = false
-	var hearing_overlaps = $DetectionZone.get_overlapping_areas()
-	var vision_overlaps = $VisionCone.get_overlapping_areas()
-	for area in hearing_overlaps + vision_overlaps:
+
+# --- Detection helpers ---
+
+func check_vision() -> bool:
+	for area in vision_cone.get_overlapping_areas():
+		if not area.is_in_group("player_detection"):
+			continue
+		var player = area.get_parent()
+		# Line-of-sight raycast — walls (layer 1) block vision.
+		var space_state = get_world_2d().direct_space_state
+		var query = PhysicsRayQueryParameters2D.create(global_position, player.global_position)
+		query.collision_mask = 1
+		if not space_state.intersect_ray(query):
+			target = player
+			return true
+	return false
+
+func check_hearing() -> bool:
+	for area in hearing_zone.get_overlapping_areas():
 		if area.is_in_group("player_detection"):
-			var to_player = player_node.global_position - global_position
-			raycast.target_position = to_local(player_node.global_position)
-			raycast.force_raycast_update()
-			if not raycast.is_colliding() or raycast.get_collider() == player_node:
-				if area in vision_overlaps:
-					# Vision cone angle check (60 degrees total)
-					var angle_to_player = abs(Vector2(1, 0).rotated(global_rotation).angle_to(to_player))
-					if angle_to_player <= deg_to_rad(30):
-						detected = true
-						break
-				elif not player_node.is_crouching:
-					detected = true
-					break
-	if detected:
-		target = player_node
-		is_chasing = true
-	return detected
+			target = area.get_parent()
+			return true
+	return false
 
-func take_damage(amount: float) -> void:
-	health -= amount
+# --- State transitions ---
+
+func start_suspicion():
+	current_state = State.SUSPICIOUS
+	suspicion_timer = 0.0
+
+func start_chase():
+	current_state = State.CHASING
+	state_timer = chase_timeout
+	if target:
+		last_known_position = target.global_position
+
+func start_searching():
+	current_state = State.SEARCHING
+	state_timer = search_wait_time
+	velocity = Vector2.ZERO
+
+# --- Damage ---
+
+func take_damage(amt: float):
+	health -= amt
 	health_bar.value = health
 	var player = get_tree().get_first_node_in_group("player")
 	if player:
 		target = player
-		is_chasing = true
-		search_timer = chase_timeout
-	if health <= 0: health = max_health; health_bar.value = health
+		start_chase()
+	if health <= 0:
+		die()
 
-func apply_trap_damage(amount: float): take_damage(amount)
-func apply_slow(multiplier: float): slow_multiplier = multiplier
-func clear_slow(): slow_multiplier = 1.0
-func apply_stun(duration: float):
-	is_stunned = true
-	stun_timer = duration
-	velocity = Vector2.ZERO
+
+# Finishes the enemy off: spawns loot and removes the node. Called by take_damage
+# when health hits 0, and by BattleManager after a battle is won (so a player
+# kill inside the battle scene drops loot in the dungeon the same way a kill
+# outside it would).
+func die() -> void:
+	_spawn_loot.call_deferred()
+	queue_free()
+
+
+func _on_melee_range_entered(body: Node2D) -> void:
+	if not body.is_in_group("player"):
+		return
+	BattleManager.start_battle(self)
+
+
+func apply_trap_damage(amt: float):
+	take_damage(amt)
+
+func _spawn_loot() -> void:
+	if loot_table == null:
+		return
+	var drops = loot_table.roll()
+
+	# Auto-pick items scatter directly onto the floor.
+	const PICKUP_SCENE = preload("res://world/item_pickup.tscn")
+	for entry in drops["auto"]:
+		var pickup = PICKUP_SCENE.instantiate()
+		get_tree().current_scene.add_child(pickup)
+		pickup.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
+		pickup.item = entry["item"]
+		pickup.quantity = entry["quantity"]
+
+	# Container drops go into a single loot bag at the enemy's position.
+	if not drops["container"].is_empty():
+		const CONTAINER_SCENE = preload("res://world/loot_container.tscn")
+		var container = CONTAINER_SCENE.instantiate()
+		get_tree().current_scene.add_child(container)
+		container.global_position = global_position
+		container.setup(drops["container"])
+
+# --- Visuals ---
+
+func update_visual_polygons():
+	var cone_shape = $VisionCone/CollisionShape2D.shape
+	if cone_shape is ConvexPolygonShape2D:
+		vision_visual.polygon = cone_shape.points
+
+	var circle_shape = $DetectionZone/CollisionShape2D.shape
+	if circle_shape is CircleShape2D:
+		hearing_visual.polygon = get_circle_points(circle_shape.radius)
+
+func get_circle_points(r: float) -> PackedVector2Array:
+	var pts = PackedVector2Array()
+	for i in range(24):
+		var a = i * PI * 2.0 / 24.0
+		pts.append(Vector2(cos(a), sin(a)) * r)
+	return pts

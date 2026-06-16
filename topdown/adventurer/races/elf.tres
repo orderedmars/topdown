@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RaceData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://adventurer/race_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+race_name = "Elf"
+description = "Long-lived and attuned to magic. Quick and clever, but their slim frames break easily."
+color = Color(0.7, 0.95, 0.7, 1)
+modifier_strength = -1
+modifier_dexterity = 2
+modifier_constitution = -1
+modifier_intelligence = 2
+modifier_wisdom = 1
+modifier_charisma = 0
+race_skills = []

@@ -16,15 +16,14 @@ func _init() -> void:
 	## Roo defaults an entry with no "type" to SSE transport — which returns
 	## HTTP 400 against our streamable-http endpoint on `/mcp`. Pin the type
 	## explicitly so Roo negotiates streamable-http (the current MCP spec's
-	## recommended remote transport). See issue #189.
-	entry_builder = func(_name: String, url: String) -> Dictionary:
-		return {"type": "streamable-http", "url": url, "disabled": false, "alwaysAllow": []}
-	## Flag pre-#189 entries (correct URL, missing or wrong "type") as drift so
-	## the dock nudges the user to re-configure after upgrading. Without this,
-	## the URL-only default verifier says CONFIGURED and the broken SSE
-	## negotiation is invisible until Roo fails at connect time.
-	verify_entry = func(entry: Dictionary, url: String) -> bool:
-		return entry.get("url", "") == url and entry.get("type", "") == "streamable-http"
+	## recommended remote transport). See issue #189. The default verifier
+	## requires every entry_extra_fields key to match, so a pre-#189 typeless
+	## entry surfaces as drift instead of silently passing as configured.
+	entry_extra_fields = {"type": "streamable-http"}
+	## `disabled` and `alwaysAllow` are user-state (they may have flipped the
+	## entry off, or auto-approved specific tools like `session_manage`).
+	## Seed on first Configure but preserve across reconfigure — without this
+	## split, the Configure-All-Mismatched sweep silently wipes the user's
+	## auto-approval list every time the type pin or URL drifts.
+	entry_initial_fields = {"disabled": false, "alwaysAllow": []}
 	detect_paths = PackedStringArray(path_template.values())
-	manual_command_builder = func(name: String, url: String, path: String) -> String:
-		return "Edit %s and add under \"mcpServers\":\n  \"%s\": { \"type\": \"streamable-http\", \"url\": \"%s\", \"disabled\": false, \"alwaysAllow\": [] }" % [path, name, url]
